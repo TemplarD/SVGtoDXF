@@ -341,6 +341,336 @@
             font-size: 12px;
             z-index: 10000;
         }
+        
+        /* Улучшенные анимации статусов */
+        .status-message {
+            animation: slideIn 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-message::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        /* Анимация пульсации для статусов */
+        .status-pulse {
+            animation: statusPulse 2s infinite;
+        }
+        
+        @keyframes statusPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.02);
+                opacity: 0.9;
+            }
+        }
+        
+        /* Иконки с подсказками */
+        .icon-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            margin: 0 5px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .icon-tooltip:hover {
+            transform: scale(1.2);
+            filter: brightness(1.2);
+        }
+        
+        .icon-tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .icon-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: 115%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .icon-tooltip:hover::after,
+        .icon-tooltip:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Анимация прогресса */
+        .progress-bar {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: progressShimmer 1.5s infinite;
+        }
+        
+        @keyframes progressShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* Анимация загрузки */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Анимация появления файлов */
+        .file-item {
+            animation: fileSlideIn 0.3s ease-out;
+            animation-fill-mode: both;
+        }
+        
+        .file-item:nth-child(1) { animation-delay: 0.05s; }
+        .file-item:nth-child(2) { animation-delay: 0.1s; }
+        .file-item:nth-child(3) { animation-delay: 0.15s; }
+        .file-item:nth-child(4) { animation-delay: 0.2s; }
+        .file-item:nth-child(5) { animation-delay: 0.25s; }
+        
+        @keyframes fileSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        /* Анимация статуса файла */
+        .file-status {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .file-status.status-reading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .file-status.status-processing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .file-status.status-completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .file-status.status-error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        /* Анимация иконок статуса */
+        .status-icon {
+            animation: iconPulse 1.5s infinite;
+        }
+        
+        @keyframes iconPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        /* Улучшенные кнопки с иконками */
+        .button-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        /* Анимация успеха */
+        .success-animation {
+            animation: successBounce 0.6s ease-out;
+        }
+        
+        @keyframes successBounce {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Анимация ошибки */
+        .error-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* Подсветка для drag & drop */
+        .drag-over {
+            background: rgba(99, 102, 241, 0.1);
+            border: 2px dashed #6366f1;
+            animation: dragPulse 1s infinite;
+        }
+        
+        @keyframes dragPulse {
+            0%, 100% {
+                border-color: #6366f1;
+                background: rgba(99, 102, 241, 0.1);
+            }
+            50% {
+                border-color: #8b5cf6;
+                background: rgba(139, 92, 246, 0.15);
+            }
+        }
+        
+        /* Улучшенные подсказки */
+        .tooltip-enhanced {
+            position: relative;
+            cursor: help;
+        }
+        
+        .tooltip-enhanced::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #1f2937, #374151);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+        }
+        
+        .tooltip-enhanced:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
+        }
+        
+        /* Анимация для кнопок */
+        .btn-enhanced {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn-enhanced:hover::before {
+            width: 300px;
+            height: 300px;
+        }
     </style>
 </head>
 <body>
@@ -425,7 +755,253 @@
             const statusElement = document.getElementById('statusMessage');
             statusElement.textContent = message;
             statusElement.className = `status-message status-${type}`;
+            
+            // Добавляем анимацию появления
+            statusElement.style.animation = 'none';
+            setTimeout(() => {
+                statusElement.style.animation = 'slideIn 0.3s ease-out';
+            }, 10);
+            
+            // Добавляем пульсацию для важных статусов
+            if (type === 'error' || type === 'warning') {
+                statusElement.classList.add('status-pulse');
+            } else {
+                statusElement.classList.remove('status-pulse');
+            }
         }
+        
+        // Функции для работы с анимациями
+        function addSuccessAnimation(element) {
+            element.classList.add('success-animation');
+            setTimeout(() => {
+                element.classList.remove('success-animation');
+            }, 600);
+        }
+        
+        function addErrorAnimation(element) {
+            element.classList.add('error-shake');
+            setTimeout(() => {
+                element.classList.remove('error-shake');
+            }, 500);
+        }
+        
+        function showLoadingSpinner(containerId) {
+            const container = document.getElementById(containerId);
+            const spinner = document.createElement('div');
+            spinner.className = 'loading-spinner';
+            spinner.id = 'loading-spinner';
+            container.appendChild(spinner);
+        }
+        
+        function hideLoadingSpinner(containerId) {
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) {
+                spinner.remove();
+            }
+        }
+        
+        // Функции для работы с прогрессом
+        function showProgressBar(containerId, progress = 0) {
+            const container = document.getElementById(containerId);
+            const existingBar = document.getElementById('progress-bar');
+            
+            if (!existingBar) {
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.id = 'progress-bar';
+                
+                const progressFill = document.createElement('div');
+                progressFill.className = 'progress-fill';
+                progressFill.id = 'progress-fill';
+                progressFill.style.width = '0%';
+                
+                progressBar.appendChild(progressFill);
+                container.appendChild(progressBar);
+            }
+            
+            updateProgressBar(progress);
+        }
+        
+        function updateProgressBar(progress) {
+            const progressFill = document.getElementById('progress-fill');
+            if (progressFill) {
+                progressFill.style.width = `${progress}%`;
+            }
+        }
+        
+        function hideProgressBar(containerId) {
+            const progressBar = document.getElementById('progress-bar');
+            if (progressBar) {
+                progressBar.remove();
+            }
+        }
+        
+        // Функции для работы с подсказками
+        function createTooltip(element, text, type = 'default') {
+            element.setAttribute('data-tooltip', text);
+            
+            if (type === 'enhanced') {
+                element.classList.add('tooltip-enhanced');
+            } else {
+                element.classList.add('icon-tooltip');
+            }
+        }
+        
+        function removeTooltip(element) {
+            element.removeAttribute('data-tooltip');
+            element.classList.remove('icon-tooltip', 'tooltip-enhanced');
+        }
+        
+        // Функции для drag & drop анимаций
+        function addDragOverAnimation(element) {
+            element.classList.add('drag-over');
+        }
+        
+        function removeDragOverAnimation(element) {
+            element.classList.remove('drag-over');
+        }
+        
+        // Функции для анимации файлов
+        function animateFileItem(fileItem, delay = 0) {
+            fileItem.style.animationDelay = `${delay}s`;
+            fileItem.classList.add('file-item');
+        }
+        
+        function animateFileStatus(statusElement, status) {
+            statusElement.className = `file-status status-${status}`;
+            const icon = statusElement.querySelector('.status-icon');
+            if (icon) {
+                icon.classList.add('status-icon');
+            }
+        }
+        
+        // Функция для создания уведомлений
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            notification.className = `status-message status-${type}`;
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '10000';
+            notification.style.minWidth = '300px';
+            notification.style.maxWidth = '400px';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Анимация появления
+            notification.style.animation = 'slideIn 0.3s ease-out';
+            
+            // Автоматическое удаление
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, duration);
+        }
+        
+        // Функция для создания кнопок с иконками
+        function createIconButton(text, icon, onClick, className = 'btn-primary') {
+            const button = document.createElement('button');
+            button.className = `${className} btn-enhanced`;
+            button.onclick = onClick;
+            
+            const iconElement = document.createElement('span');
+            iconElement.className = 'button-icon';
+            iconElement.textContent = icon;
+            
+            const textElement = document.createElement('span');
+            textElement.textContent = text;
+            
+            button.appendChild(iconElement);
+            button.appendChild(textElement);
+            
+            return button;
+        }
+        
+        // Функция для обновления статуса с анимацией
+        function updateStatusWithAnimation(message, type = 'info', duration = 2000) {
+            updateStatus(message, type);
+            
+            if (type === 'success') {
+                const statusElement = document.getElementById('statusMessage');
+                addSuccessAnimation(statusElement);
+            } else if (type === 'error') {
+                const statusElement = document.getElementById('statusMessage');
+                addErrorAnimation(statusElement);
+            }
+            
+            // Автоматически убираем пульсацию через некоторое время
+            if (type === 'error' || type === 'warning') {
+                setTimeout(() => {
+                    const statusElement = document.getElementById('statusMessage');
+                    statusElement.classList.remove('status-pulse');
+                }, duration);
+            }
+        }
+        
+        // Функция для создания индикатора загрузки для кнопок
+        function setButtonLoading(buttonId, loading = true) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+            
+            if (loading) {
+                button.disabled = true;
+                const originalText = button.textContent;
+                button.setAttribute('data-original-text', originalText);
+                button.innerHTML = '<span class="loading-spinner"></span> Загрузка...';
+            } else {
+                button.disabled = false;
+                const originalText = button.getAttribute('data-original-text');
+                if (originalText) {
+                    button.textContent = originalText;
+                    button.removeAttribute('data-original-text');
+                }
+            }
+        }
+        
+        // Инициализация подсказок для существующих элементов
+        function initializeTooltips() {
+            // Добавляем подсказки к кнопкам
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                const text = button.textContent.trim();
+                if (text.includes('Выбрать')) {
+                    createTooltip(button, 'Выберите файлы для конвертации', 'enhanced');
+                } else if (text.includes('Конвертировать')) {
+                    createTooltip(button, 'Начать конвертацию выбранных файлов', 'enhanced');
+                } else if (text.includes('Очистить')) {
+                    createTooltip(button, 'Очистить список выбранных файлов', 'enhanced');
+                }
+            });
+            
+            // Добавляем подсказки к элементам статуса
+            const statusElements = document.querySelectorAll('.file-status');
+            statusElements.forEach(element => {
+                const status = element.className.includes('reading') ? 'Чтение файла' :
+                               element.className.includes('processing') ? 'Обработка файла' :
+                               element.className.includes('completed') ? 'Конвертация завершена' :
+                               element.className.includes('error') ? 'Ошибка конвертации' : 'Неизвестный статус';
+                createTooltip(element, status);
+            });
+        }
+        
+        // Добавляем CSS анимацию для slideOut
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideOut {
+                from {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
 
         function updateProgress(current, total) {
             const progressBar = document.getElementById('progressBar');
@@ -1154,6 +1730,9 @@
             debugLog('✅ Инициализация завершена', 'success');
             console.log('Инициализация завершена');
             
+            // Инициализируем подсказки
+            initializeTooltips();
+            
             // Добавляем тестовые функции в глобальную область
             console.log('Тестовые функции доступны: testDialog(), testFolderDialog()');
         });
@@ -1164,30 +1743,33 @@
             if (index !== -1) {
                 const statusElement = document.getElementById(`file-status-${index}`);
                 if (statusElement) {
+                    // Используем новую функцию анимации статуса
+                    animateFileStatus(statusElement, status);
+                    
                     if (status === 'reading') {
-                        statusElement.className = 'file-status status-reading';
                         statusElement.innerHTML = `
                             <span class="status-icon">📖</span>
                             <span>Чтение...</span>
                         `;
                     } else if (status === 'processing') {
-                        statusElement.className = 'file-status status-processing';
                         statusElement.innerHTML = `
                             <span class="status-icon">⚙️</span>
                             <span>В процессе...</span>
                         `;
                     } else if (status === 'completed') {
-                        statusElement.className = 'file-status status-completed';
                         statusElement.innerHTML = `
                             <span class="status-icon">✅</span>
                             <span>DXF</span>
                         `;
+                        // Добавляем анимацию успеха
+                        addSuccessAnimation(statusElement);
                     } else if (status === 'error') {
-                        statusElement.className = 'file-status status-error';
                         statusElement.innerHTML = `
                             <span class="status-icon">❌</span>
                             <span>Ошибка</span>
                         `;
+                        // Добавляем анимацию ошибки
+                        addErrorAnimation(statusElement);
                     }
                 }
             }
