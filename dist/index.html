@@ -1956,7 +1956,7 @@
                 }
                 
                 const { invoke } = window.__TAURI__.core;
-                const result = await invoke('run_autotest');
+                const result = await invoke('run_autotest_ai');
                 
                 debugLog(`✅ Автотест завершен`, 'success');
                 debugLog(`📊 Пройдено: ${result.passed_tests}/${result.total_tests}`, 'info');
