@@ -28,6 +28,7 @@ pub fn run() {
         commands::toggle_debug_mode,
         commands::create_debug_report,
         commands::run_autotest,
+        commands::run_autotest_ai,
         commands::get_log_directory,
         // Система логирования
         commands::init_logging_system,

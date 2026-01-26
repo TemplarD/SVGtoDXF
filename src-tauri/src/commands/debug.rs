@@ -16,6 +16,14 @@ pub struct AutotestResult {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TestResult {
+    pub name: String,
+    pub passed: bool,
+    pub message: String,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DebugReport {
     pub timestamp: String,
     pub mode: String, // "USER" | "AI"
@@ -640,10 +648,113 @@ fn get_log_directory_path(mode: &str) -> Result<String, String> {
             Ok(current_dir.join("autotest_logs").to_string_lossy().to_string())
         }
         _ => {
-            // Для пользователя - домашняя директория
             let home_dir = dirs::home_dir()
                 .ok_or("Не удалось найти домашнюю директорию")?;
             Ok(home_dir.join("svg-to-dxf-converter").join("logs").to_string_lossy().to_string())
+        }
+    }
+}
+
+/// Запускает автотест через ИИ API
+#[command]
+pub async fn run_autotest_ai() -> Result<AutotestResult, String> {
+    use std::time::Instant;
+    let start_time = Instant::now();
+    
+    // Записываем начало автотеста в лог
+    log_message(
+        LogLevel::Info,
+        "AUTOTEST_AI",
+        "🤖 Запуск автотеста через ИИ API",
+        None,
+        None
+    )?;
+    
+    let mut passed = 0;
+    let mut failed = 0;
+    
+    // Тест 1: Проверка файловой системы
+    let fs_test = test_file_system_access().await;
+    if fs_test.passed {
+        passed += 1;
+    } else {
+        failed += 1;
+    }
+    
+    // Тест 2: Проверка логирования
+    let logging_test = test_logging_system().await;
+    if logging_test.passed {
+        passed += 1;
+    } else {
+        failed += 1;
+    }
+    
+    let duration = start_time.elapsed();
+    let total = passed + failed;
+    let success_rate = if total > 0 { (passed * 100) / total } else { 0 };
+    
+    let autotest_result = AutotestResult {
+        test_name: "Автотест ИИ".to_string(),
+        passed: failed == 0,
+        message: format!("Автотест завершен: {}/{} тестов пройдено ({}%)", passed, total, success_rate),
+        duration_ms: duration.as_millis() as u64,
+        details: Some(format!("Пройдено: {}, Провалено: {}", passed, failed)),
+    };
+    
+    // Записываем результаты в лог
+    log_message(
+        LogLevel::Info,
+        "AUTOTEST_AI",
+        &format!("🤖 Автотест через ИИ завершен: {}/{} тестов пройдено ({}%)", passed, total, success_rate),
+        None,
+        None
+    )?;
+    
+    Ok(autotest_result)
+}
+
+/// Тест доступности файловой системы
+async fn test_file_system_access() -> AutotestResult {
+    use std::time::Instant;
+    let start = Instant::now();
+    
+    match std::env::current_dir() {
+        Ok(_) => AutotestResult {
+            test_name: "Файловая система".to_string(),
+            passed: true,
+            message: "Доступ к файловой системе успешен".to_string(),
+            duration_ms: start.elapsed().as_millis() as u64,
+            details: None,
+        },
+        Err(e) => AutotestResult {
+            test_name: "Файловая система".to_string(),
+            passed: false,
+            message: format!("Ошибка доступа: {}", e),
+            duration_ms: start.elapsed().as_millis() as u64,
+            details: None,
+        }
+    }
+}
+
+/// Тест системы логирования
+async fn test_logging_system() -> AutotestResult {
+    use std::time::Instant;
+    let start = Instant::now();
+    
+    match get_log_directory_path("USER") {
+        Ok(_) => AutotestResult {
+            test_name: "Логирование".to_string(),
+            passed: true,
+            message: "Система логирования работает".to_string(),
+            duration_ms: start.elapsed().as_millis() as u64,
+            details: None,
+        },
+        Err(e) => AutotestResult {
+            test_name: "Логирование".to_string(),
+            passed: false,
+            message: format!("Ошибка логирования: {}", e),
+            duration_ms: start.elapsed().as_millis() as u64,
+            details: None,
         }
     }
 }

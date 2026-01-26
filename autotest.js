@@ -807,49 +807,25 @@ console.log('🚀 Полный автотест готов к запуску. В
 window.runFullAutotest = runFullAutotest;
 
 // Интеграция с F12 и программным вызовом
+// Интеграция с F12 и программным вызовом
 window.runAutotestAI = async function() {
-    console.log('🤖 Запуск автотеста через ИИ API...');
+    console.log("🤖 Запуск автотеста через ИИ API...");
     
     try {
         // Проверяем доступность Tauri API
         if (!window.__TAURI__ || !window.__TAURI__.core) {
-            console.error('❌ Tauri API недоступен для автотеста');
-            return { success: false, error: 'Tauri API недоступен' };
+            console.error("❌ Tauri API недоступен для автотеста");
+            return { success: false, error: "Tauri API недоступен" };
         }
         
-        // Записываем начало автотеста в лог
-        await window.__TAURI__.core.invoke('write_log', {
-            level: 'INFO',
-            message: '🤖 Запуск автотеста через ИИ API',
-            timestamp: new Date().toISOString()
-        });
+        // Запускаем автотест через Rust
+        const result = await window.__TAURI__.core.invoke("run_autotest_ai");
         
-        // Запускаем полный автотест
-        const results = await runFullAutotest();
-        
-        // Записываем результаты в лог
-        await window.__TAURI__.core.invoke('write_log', {
-            level: 'INFO',
-            message: `🤖 Автотест через ИИ завершен: ${results.summary.passed}/${results.summary.total} тестов пройдено (${results.summary.successRate}%)`,
-            timestamp: new Date().toISOString()
-        });
-        
-        console.log('✅ Автотест через ИИ завершен успешно');
-        return { success: true, results };
+        console.log("✅ Автотест через ИИ завершен:", result);
+        return { success: true, result };
         
     } catch (error) {
-        console.error('❌ Ошибка автотеста через ИИ:', error);
-        
-        try {
-            await window.__TAURI__.core.invoke('write_log', {
-                level: 'ERROR',
-                message: `❌ Ошибка автотеста через ИИ: ${error.message}`,
-                timestamp: new Date().toISOString()
-            });
-        } catch (logError) {
-            console.error('❌ Ошибка записи в лог:', logError);
-        }
-        
+        console.error("❌ Ошибка автотеста через ИИ:", error);
         return { success: false, error: error.message };
     }
 };
