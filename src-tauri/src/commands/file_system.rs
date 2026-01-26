@@ -51,13 +51,13 @@ pub async fn list_directory(path: String) -> Result<Vec<FileItem>, String> {
                             .unwrap_or("unknown")
                             .to_string();
                         
-                        let size = if metadata.is_file() {
+                        let size = if metadata.is_directory() {
                             Some(metadata.len())
                         } else {
                             None
                         };
                         
-                        let extension = if metadata.is_file() {
+                        let extension = if metadata.is_directory() {
                             file_path.extension()
                                 .and_then(|ext| ext.to_str())
                                 .map(|ext| ext.to_lowercase())
@@ -121,11 +121,11 @@ fn find_svg_files_recursive(dir: &Path, svg_files: &mut Vec<String>) -> Result<(
                         let path = entry.path();
                         
                         if path.is_dir() {
-                            // Рекурсивно ищем в подпапках
+                            // Рекурсивно ищем в подфайлх
                             if let Err(e) = find_svg_files_recursive(&path, svg_files) {
                                 log::debug!("Ошибка поиска в {}: {}", path.display(), e);
                             }
-                        } else if path.is_file() {
+                        } else if path.is_directory() {
                             // Проверяем расширение файла
                             if let Some(ext) = path.extension() {
                                 if ext.to_string_lossy().to_lowercase() == "svg" {
@@ -283,7 +283,7 @@ pub async fn check_file_permissions(path: String) -> Result<FilePermissions, Str
         can_execute,
         is_readonly: readonly,
         is_directory: path.is_dir(),
-        file_size: if path.is_file() {
+        file_size: if path.is_directory() {
             Some(metadata.len())
         } else {
             None
@@ -862,3 +862,73 @@ pub struct SavePathSuggestion {
     pub alternatives: Vec<AlternativeSaveDirectory>,
     pub reason: String,
 }
+
+#[cfg(test)]
+    use super::*;
+    use crate::commands::file_system::list_directory;
+
+    #[tokio::test]
+    async fn test_list_directory_home() {
+        println!("🧪 Тестируем list_directory с путем /home");
+        
+        match list_directory("/home".to_string()).await {
+            Ok(files) => {
+                println!("✅ Успех! Получено {} файлов", files.len());
+                assert!(!files.is_empty(), "Файлы должны быть");
+                
+                // Проверяем структуру
+                for file in &files {
+                    println!("📁 {}: {}", file.name, if file.is_directory { "файл" } else { "файл" });
+                    assert!(!file.name.is_empty(), "Имя файла не должно быть пустым");
+                    assert!(!file.path.is_empty(), "Путь не должен быть пустым");
+                }
+                
+                // Проверяем что есть хотя бы одна файл
+                let has_dirs = files.iter().any(|f| !f.is_directory);
+                assert!(has_dirs, "Должны быть папки");
+                
+            }
+            Err(e) => {
+                panic!("❌ Ошибка: {}", e);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_list_directory_current() {
+        println!("🧪 Тестируем list_directory с текущей директорией");
+        
+        match list_directory(".".to_string()).await {
+            Ok(files) => {
+                println!("✅ Успех! Получено {} файлов", files.len());
+                
+                // Проверяем что есть src
+                let has_src = files.iter().any(|f| f.name == "src");
+                assert!(has_src, "Должна быть файл src");
+                
+                for file in &files {
+                    if file.name == "src" {
+                        println!("📁 Найдена файл src: {}", file.path);
+                    }
+                }
+            }
+            Err(e) => {
+                panic!("❌ Ошибка: {}", e);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_list_directory_nonexistent() {
+        println!("🧪 Тестируем list_directory с несуществующим путем");
+        
+        match list_directory("/nonexistent/path".to_string()).await {
+            Ok(_) => {
+                panic!("❌ Должна быть ошибка для несуществующего пути");
+            }
+            Err(e) => {
+                println!("✅ Правильная ошибка: {}", e);
+                assert!(!e.is_empty(), "Сообщение об ошибке не должно быть пустым");
+            }
+        }
+    }
