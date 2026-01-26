@@ -14,6 +14,11 @@ pub fn run() {
         commands::file_exists,
         commands::get_parent_directory,
         commands::get_system_info,
+        commands::check_directory_readonly,
+        commands::is_directory_readonly,
+        commands::find_alternative_save_directories,
+        commands::suggest_save_path,
+        commands::check_directory_access_detailed,
         // Конвертация
         commands::convert_single_file,
         commands::convert_multiple_files,

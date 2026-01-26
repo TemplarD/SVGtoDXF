@@ -2,6 +2,7 @@ use tauri::command;
 use std::path::Path;
 use std::fs;
 use serde::{Deserialize, Serialize};
+use dirs;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileItem {
@@ -540,4 +541,324 @@ pub struct SystemDirectoriesSummary {
     pub readonly_directories: usize,
     pub missing_directories: usize,
     pub has_write_access: bool,
+}
+
+/// Проверяет доступность директории только для чтения
+#[command]
+pub async fn check_directory_readonly(path: String) -> Result<bool, String> {
+    let path = Path::new(&path);
+    
+    if !path.exists() {
+        return Err("Директория не существует".to_string());
+    }
+    
+    // Проверяем права чтения
+    match fs::read_dir(path) {
+        Ok(_) => Ok(true),
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                Ok(false)
+            } else {
+                Err(format!("Ошибка доступа к директории: {}", e))
+            }
+        }
+    }
+}
+
+/// Проверяет, является ли директория только для чтения
+#[command]
+pub async fn is_directory_readonly(path: String) -> Result<bool, String> {
+    let path = Path::new(&path);
+    
+    if !path.exists() {
+        return Err("Директория не существует".to_string());
+    }
+    
+    // Проверяем права записи
+    let test_file = path.join(".readonly_test_12345.tmp");
+    match fs::write(&test_file, "test") {
+        Ok(_) => {
+            // Если можем записать, удаляем тестовый файл
+            let _ = fs::remove_file(&test_file);
+            Ok(false) // Не только для чтения
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                Ok(true) // Только для чтения
+            } else {
+                Err(format!("Ошибка проверки прав записи: {}", e))
+            }
+        }
+    }
+}
+
+/// Находит альтернативные директории для сохранения
+#[command]
+pub async fn find_alternative_save_directories(original_path: String) -> Result<Vec<AlternativeSaveDirectory>, String> {
+    let original_path = Path::new(&original_path);
+    let mut alternatives = Vec::new();
+    
+    // Если оригинальная директория доступна для записи, возвращаем ее
+    if let Ok(writable) = check_directory_writable(original_path.to_string_lossy().to_string()).await {
+        alternatives.push(AlternativeSaveDirectory {
+            path: original_path.to_string_lossy().to_string(),
+            name: "Оригинальная директория".to_string(),
+            is_available: true,
+            is_preferred: true,
+            reason: "Директория доступна для записи".to_string(),
+            available_space: get_available_space(&original_path).await,
+        });
+    }
+    
+    // Проверяем родительскую директорию
+    if let Some(parent) = original_path.parent() {
+        let parent_path = parent.to_string_lossy().to_string();
+        if let Ok(_writable) = check_directory_writable(parent_path.clone()).await {
+            alternatives.push(AlternativeSaveDirectory {
+                path: parent_path.clone(),
+                name: "Родительская директория".to_string(),
+                is_available: true,
+                is_preferred: false,
+                reason: "Родительская директория доступна для записи".to_string(),
+                available_space: get_available_space(Path::new(&parent_path)).await,
+            });
+        }
+    }
+    
+    // Проверяем домашнюю директорию
+    if let Some(home_dir) = dirs::home_dir() {
+        let home_path = home_dir.to_string_lossy().to_string();
+        if let Ok(_writable) = check_directory_writable(home_path.clone()).await {
+            alternatives.push(AlternativeSaveDirectory {
+                path: home_path.clone(),
+                name: "Домашняя директория".to_string(),
+                is_available: true,
+                is_preferred: false,
+                reason: "Домашняя директория пользователя".to_string(),
+                available_space: get_available_space(Path::new(&home_path)).await,
+            });
+        }
+    }
+    
+    // Проверяем директорию документов
+    if let Some(doc_dir) = dirs::document_dir() {
+        let doc_path = doc_dir.to_string_lossy().to_string();
+        if let Ok(_writable) = check_directory_writable(doc_path.clone()).await {
+            alternatives.push(AlternativeSaveDirectory {
+                path: doc_path.clone(),
+                name: "Документы".to_string(),
+                is_available: true,
+                is_preferred: false,
+                reason: "Директория документов".to_string(),
+                available_space: get_available_space(Path::new(&doc_path)).await,
+            });
+        }
+    }
+    
+    // Проверяем директорию рабочего стола
+    if let Some(desktop_dir) = dirs::desktop_dir() {
+        let desktop_path = desktop_dir.to_string_lossy().to_string();
+        if let Ok(_writable) = check_directory_writable(desktop_path.clone()).await {
+            alternatives.push(AlternativeSaveDirectory {
+                path: desktop_path.clone(),
+                name: "Рабочий стол".to_string(),
+                is_available: true,
+                is_preferred: false,
+                reason: "Рабочий стол".to_string(),
+                available_space: get_available_space(Path::new(&desktop_path)).await,
+            });
+        }
+    }
+    
+    // Проверяем временную директорию
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.join("svg-to-dxf-converter");
+    if let Ok(writable) = check_directory_writable(temp_path.to_string_lossy().to_string()).await {
+        alternatives.push(AlternativeSaveDirectory {
+            path: temp_path.to_string_lossy().to_string(),
+            name: "Временная директория".to_string(),
+            is_available: true,
+            is_preferred: false,
+            reason: "Временная директория системы".to_string(),
+            available_space: get_available_space(&temp_path).await,
+        });
+    }
+    
+    // Проверяем директорию загрузок
+    if let Some(download_dir) = dirs::download_dir() {
+        let download_path = download_dir.join("SVG-to-DXF");
+        if let Ok(writable) = check_directory_writable(download_path.to_string_lossy().to_string()).await {
+            alternatives.push(AlternativeSaveDirectory {
+                path: download_path.to_string_lossy().to_string(),
+                name: "Загрузки".to_string(),
+                is_available: true,
+                is_preferred: false,
+                reason: "Директория загрузок".to_string(),
+                available_space: get_available_space(&download_path).await,
+            });
+        }
+    }
+    
+    Ok(alternatives)
+}
+
+/// Проверяет и предлагает альтернативные пути сохранения
+#[command]
+pub async fn suggest_save_path(original_path: String) -> Result<SavePathSuggestion, String> {
+    let alternatives = find_alternative_save_directories(original_path.clone()).await?;
+    
+    if alternatives.is_empty() {
+        return Err("Не найдено доступных директорий для сохранения".to_string());
+    }
+    
+    let preferred = alternatives.iter().find(|d| d.is_preferred && d.is_available);
+    let available: Vec<_> = alternatives.iter().filter(|d| d.is_available).collect();
+    
+    if available.is_empty() {
+        return Err("Нет доступных директорий для сохранения".to_string());
+    }
+    
+    Ok(SavePathSuggestion {
+        original_path,
+        suggested_path: preferred.unwrap_or(&available[0]).path.clone(),
+        alternatives: available.iter().map(|d| (*d).clone()).collect(),
+        reason: if preferred.is_some() {
+            "Оригинальная директория доступна".to_string()
+        } else {
+            "Оригинальная директория недоступна, предложены альтернативы".to_string()
+        },
+    })
+}
+
+/// Проверяет права доступа к директории
+#[command]
+pub async fn check_directory_access_detailed(path: String) -> Result<DirectoryAccessInfo, String> {
+    let path = Path::new(&path);
+    
+    if !path.exists() {
+        return Err("Директория не существует".to_string());
+    }
+    
+    let mut access_info = DirectoryAccessInfo {
+        path: path.to_string_lossy().to_string(),
+        exists: true,
+        is_directory: path.is_dir(),
+        can_read: false,
+        can_write: false,
+        can_execute: false,
+        is_readonly: false,
+        file_count: 0,
+        directory_count: 0,
+        total_size: 0,
+        permissions: Vec::new(),
+        error: None,
+    };
+    
+    // Проверяем права чтения
+    match fs::read_dir(path) {
+        Ok(entries) => {
+            access_info.can_read = true;
+            
+            for entry in entries {
+                let entry = match entry {
+                    Ok(entry) => entry,
+                    Err(_) => continue,
+                };
+                
+                let metadata = match entry.metadata() {
+                    Ok(meta) => meta,
+                    Err(_) => continue,
+                };
+                
+                match entry.file_type() {
+                    Ok(file_type) => {
+                        if file_type.is_dir() {
+                            access_info.directory_count += 1;
+                        } else {
+                            access_info.file_count += 1;
+                            access_info.total_size += metadata.len();
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                access_info.error = Some("Отказано в доступе".to_string());
+            } else {
+                access_info.error = Some(format!("Ошибка чтения: {}", e));
+            }
+        }
+    }
+    
+    // Проверяем права записи
+    let test_file = path.join(".write_test_12345.tmp");
+    match fs::write(&test_file, "test") {
+        Ok(_) => {
+            access_info.can_write = true;
+            let _ = fs::remove_file(&test_file);
+        }
+        Err(_) => {
+            access_info.can_write = false;
+            access_info.is_readonly = true;
+        }
+    }
+    
+    // Проверяем права выполнения (для директорий)
+    if path.is_dir() {
+        access_info.can_execute = access_info.can_read;
+    }
+    
+    // Получаем информацию о правах доступа
+    let metadata = match fs::metadata(path) {
+        Ok(meta) => meta,
+        Err(_) => {
+            return Err("Не удалось получить метаданные".to_string());
+        }
+    };
+    
+    let permissions = metadata.permissions();
+    access_info.is_readonly = permissions.readonly();
+    
+    // Добавляем информацию о правах
+    access_info.permissions.push(format!("Read: {}", !permissions.readonly()));
+    access_info.permissions.push(format!("Write: {}", !permissions.readonly()));
+    access_info.permissions.push(format!("Execute: {}", path.is_dir()));
+    
+    Ok(access_info)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DirectoryAccessInfo {
+    pub path: String,
+    pub exists: bool,
+    pub is_directory: bool,
+    pub can_read: bool,
+    pub can_write: bool,
+    pub can_execute: bool,
+    pub is_readonly: bool,
+    pub file_count: usize,
+    pub directory_count: usize,
+    pub total_size: u64,
+    pub permissions: Vec<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AlternativeSaveDirectory {
+    pub path: String,
+    pub name: String,
+    pub is_available: bool,
+    pub is_preferred: bool,
+    pub reason: String,
+    pub available_space: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SavePathSuggestion {
+    pub original_path: String,
+    pub suggested_path: String,
+    pub alternatives: Vec<AlternativeSaveDirectory>,
+    pub reason: String,
 }
