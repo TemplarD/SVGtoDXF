@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVG to DXF Converter</title>
+    <title>SVG to DXF</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -675,7 +675,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>SVG to DXF Converter</h1>
+        <h1>SVG to DXF</h1>
         
         <div id="statusMessage" class="status-message status-info">
             🚀 Загрузка приложения...
@@ -690,6 +690,12 @@
             </button>
             <button class="btn-secondary" id="convertBtn">
                 🔄 Конвертировать
+            </button>
+            <button class="btn-secondary" id="clearBtn">
+                🗑️ Очистить
+            </button>
+            <button class="btn-secondary" id="helpBtn">
+                ❓ Справка
             </button>
         </div>
 
@@ -741,6 +747,65 @@
             <div class="dialog-footer">
                 <button class="nav-button" onclick="customFolderDialog.cancel()">Отмена</button>
                 <button class="nav-button" onclick="customFolderDialog.select()">Выбрать</button>
+            </div>
+        </div>
+        
+        <!-- Диалог справки -->
+        <div id="helpDialog" class="dialog-overlay" style="display: none;">
+            <div class="dialog">
+                <div class="dialog-header">
+                    <h3>❓ Справка - SVG to DXF</h3>
+                    <button class="dialog-close" onclick="helpDialog.close()">×</button>
+                </div>
+                <div class="dialog-content">
+                    <h4>🎯 Возможности программы:</h4>
+                    <ul>
+                        <li>✅ Конвертация SVG файлов в DXF формат</li>
+                        <li>✅ Массовая обработка файлов</li>
+                        <li>✅ Drag & Drop для удобства</li>
+                        <li>✅ Автоматическое сохранение рядом с исходными файлами</li>
+                        <li>✅ Умные альтернативные пути для read-only папок</li>
+                    </ul>
+                    
+                    <h4>⚠️ Ограничения конвертации:</h4>
+                    <ul>
+                        <li>📐 Поддерживаются основные SVG элементы: path, rect, circle, ellipse, line, polyline, polygon</li>
+                        <li>🎨 Цвета сохраняются в RGB формате</li>
+                        <li>📏 Масштаб и преобразования сохраняются</li>
+                        <li>❌ Текстовые элементы конвертируются в кривые</li>
+                        <li>❌ Градиенты и паттерны не поддерживаются</li>
+                        <li>❌ Эффекты фильтров не поддерживаются</li>
+                    </ul>
+                    
+                    <h4>🎮 Как использовать:</h4>
+                    <ol>
+                        <li>Нажмите "Выбрать файлы" или перетащите SVG файлы в окно</li>
+                        <li>Или нажмите "Выбрать папку" для массовой конвертации</li>
+                        <li>Нажмите "Конвертировать" для начала процесса</li>
+                        <li>DXF файлы появятся рядом с исходными</li>
+                        <li>При проблемах с доступом выберите альтернативную папку</li>
+                    </ol>
+                    
+                    <h4>🔥 Горячие клавиши:</h4>
+                    <ul>
+                        <li><kbd>F12</kbd> - Дебаг режим</li>
+                        <li><kbd>Ctrl+O</kbd> - Выбрать файлы</li>
+                        <li><kbd>Ctrl+F</kbd> - Выбрать папку</li>
+                        <li><kbd>Ctrl+R</kbd> - Начать конвертацию</li>
+                        <li><kbd>Delete</kbd> - Очистить список</li>
+                    </ul>
+                    
+                    <h4>💡 Советы:</h4>
+                    <ul>
+                        <li>Для лучшего качества используйте векторные SVG без растровых изображений</li>
+                        <li>Группируйте сложные объекты перед конвертацией</li>
+                        <li>Проверьте результаты в CAD программе</li>
+                        <li>Используйте F12 для диагностики проблем</li>
+                    </ul>
+                </div>
+                <div class="dialog-footer">
+                    <button class="nav-button" onclick="helpDialog.close()">Закрыть</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1343,6 +1408,18 @@
             }
         };
 
+        // Диалог справки
+        const helpDialog = {
+            show: function() {
+                document.getElementById('helpDialog').style.display = 'flex';
+                updateStatus('Справка открыта', 'info');
+            },
+            close: function() {
+                document.getElementById('helpDialog').style.display = 'none';
+                updateStatus('Справка закрыта', 'info');
+            }
+        };
+
         // Функция переключения отладки
         function toggleDebug() {
             debugMode = !debugMode;
@@ -1670,6 +1747,17 @@
                 debugLog('✅ Обработчик кнопки конвертации добавлен', 'success');
             } else {
                 debugLog('❌ Кнопка конвертации НЕ НАЙДЕНА', 'error');
+            }
+            
+            // Обработчик кнопки справки
+            const helpBtn = document.getElementById('helpBtn');
+            if (helpBtn) {
+                helpBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    debugLog('🟡 КНОПКА СПРАВКИ НАЖАТА!', 'info');
+                    console.log('Кнопка справки нажата!');
+                    helpDialog.show();
+                });
             }
             
             // Проверяем кнопки в диалогах

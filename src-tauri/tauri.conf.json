@@ -1,5 +1,5 @@
 {
-  "productName": "SVG to DXF Converter",
+  "productName": "SVG to DXF",
   "version": "1.0.0",
   "identifier": "com.svgtodxf.converter",
   "build": {
@@ -8,7 +8,7 @@
   "app": {
     "windows": [
       {
-        "title": "SVG to DXF Converter v1.0.0",
+        "title": "SVG to DXF v1.0.0",
         "width": 900,
         "height": 700,
         "minWidth": 800,

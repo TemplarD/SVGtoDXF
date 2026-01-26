@@ -50,16 +50,46 @@ async function runFullAutotest() {
     console.log(`📈 Всего тестов: ${summary.total}`);
     console.log(`🎯 Успешность: ${summary.successRate}%`);
     
-    // Сохраняем результаты
+    // Сохраняем результаты в лог
     if (window.__TAURI__ && window.__TAURI__.core) {
         try {
+            // Записываем начало автотеста
             await window.__TAURI__.core.invoke('write_log', {
                 level: 'INFO',
-                message: `Полный автотест завершен: ${summary.passed}/${summary.total} тестов пройдено (${summary.successRate}%)`,
+                message: `🚀 Начало полного автотеста SVG to DXF v1.0.0`,
                 timestamp: new Date().toISOString()
             });
+            
+            // Записываем каждый тест
+            for (const test of results.tests) {
+                await window.__TAURI__.core.invoke('write_log', {
+                    level: test.passed ? 'INFO' : 'ERROR',
+                    message: `${test.passed ? '✅' : '❌'} ${test.name}: ${test.passed ? 'ПРОЙДЕН' : 'ПРОВАЛЕН'} (${test.duration}ms)`,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Записываем детали теста
+                if (test.details && test.details.length > 0) {
+                    for (const detail of test.details) {
+                        await window.__TAURI__.core.invoke('write_log', {
+                            level: 'DEBUG',
+                            message: `   ${detail}`,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                }
+            }
+            
+            // Записываем итоговые результаты
+            await window.__TAURI__.core.invoke('write_log', {
+                level: 'INFO',
+                message: `📊 ИТОГИ АВТОТЕСТА: ${summary.passed}/${summary.total} тестов пройдено (${summary.successRate}%)`,
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log('✅ Результаты автотеста сохранены в лог');
         } catch (error) {
-            console.error('Ошибка сохранения результатов:', error);
+            console.error('❌ Ошибка сохранения результатов в лог:', error);
         }
     }
     
