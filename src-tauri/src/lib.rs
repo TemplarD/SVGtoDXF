@@ -11,6 +11,9 @@ pub fn run() {
         commands::list_directory,
         commands::get_svg_files_in_directory,
         commands::get_system_roots,
+        commands::file_exists,
+        commands::get_parent_directory,
+        commands::get_system_info,
         // Конвертация
         commands::convert_single_file,
         commands::convert_multiple_files,

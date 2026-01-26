@@ -22,12 +22,13 @@ pub struct ConversionProgress {
     pub message: String,
 }
 
+pub type ConversionResultType = Result<ConversionResult>;
+
 /// Конвертирует SVG файл в DXF формат
 pub async fn convert_svg_to_dxf(svg_path: &str, output_path: &str) -> Result<ConversionResult> {
     let svg_path = Path::new(svg_path);
     let output_path = Path::new(output_path);
     
-    // Проверяем существует ли исходный файл
     if !svg_path.exists() {
         return Ok(ConversionResult {
             success: false,
@@ -38,14 +39,11 @@ pub async fn convert_svg_to_dxf(svg_path: &str, output_path: &str) -> Result<Con
         });
     }
     
-    // Читаем SVG файл
     let svg_content = fs::read_to_string(svg_path)
         .context("Не удалось прочитать SVG файл")?;
     
-    // Создаем DXF чертеж
     let mut drawing = Drawing::new();
     
-    // Парсим SVG и конвертируем элементы
     let mut conversion_data = ConversionData::new();
     parse_svg_to_dxf(&svg_content, &mut drawing, &mut conversion_data)?;
     

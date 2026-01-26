@@ -215,3 +215,329 @@ pub async fn get_parent_directory(path: String) -> Result<Option<String>, String
         None => Ok(None),
     }
 }
+
+/// Проверяет доступность директории для записи
+#[command]
+pub async fn check_directory_writable(path: String) -> Result<bool, String> {
+    let path = Path::new(&path);
+    
+    if !path.exists() {
+        // Пробуем создать директорию
+        match fs::create_dir_all(path) {
+            Ok(_) => return Ok(true),
+            Err(e) => return Err(format!("Не удалось создать директорию: {}", e)),
+        }
+    }
+    
+    // Пробуем создать тестовый файл
+    let test_file = path.join(".write_test_12345.tmp");
+    match fs::write(&test_file, "test") {
+        Ok(_) => {
+            // Удаляем тестовый файл
+            let _ = fs::remove_file(&test_file);
+            Ok(true)
+        }
+        Err(e) => {
+            Err(format!("Нет прав записи в директорию: {}", e))
+        }
+    }
+}
+
+/// Проверяет права доступа к файлу или директории
+#[command]
+pub async fn check_file_permissions(path: String) -> Result<FilePermissions, String> {
+    let path = Path::new(&path);
+    
+    if !path.exists() {
+        return Err("Файл или директория не существует".to_string());
+    }
+    
+    let metadata = fs::metadata(path)
+        .map_err(|e| format!("Не удалось получить метаданные: {}", e))?;
+    
+    let readonly = metadata.permissions().readonly();
+    
+    // Проверяем права записи
+    let can_write = if readonly {
+        false
+    } else {
+        // Дополнительная проверка для директорий
+        if path.is_dir() {
+            check_directory_writable(path.to_string_lossy().to_string()).await.unwrap_or(false)
+        } else {
+            !readonly
+        }
+    };
+    
+    // Проверяем права чтения
+    let can_read = metadata.permissions().readonly() == false;
+    
+    // Проверяем права выполнения (для директорий)
+    let can_execute = path.is_dir() && metadata.permissions().readonly() == false;
+    
+    Ok(FilePermissions {
+        path: path.to_string_lossy().to_string(),
+        can_read,
+        can_write,
+        can_execute,
+        is_readonly: readonly,
+        is_directory: path.is_dir(),
+        file_size: if path.is_file() {
+            Some(metadata.len())
+        } else {
+            None
+        },
+        modified_time: metadata.modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs()),
+    })
+}
+
+/// Находит доступные директории для сохранения
+#[command]
+pub async fn find_writable_directories(base_path: String) -> Result<Vec<WritableDirectory>, String> {
+    let base_path = Path::new(&base_path);
+    let mut writable_dirs = Vec::new();
+    
+    // Проверяем базовую директорию
+    if let Ok(writable) = check_directory_writable(base_path.to_string_lossy().to_string()).await {
+        if writable {
+            writable_dirs.push(WritableDirectory {
+                path: base_path.to_string_lossy().to_string(),
+                name: base_path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("base")
+                    .to_string(),
+                is_default: true,
+                available_space: get_available_space(&base_path).await,
+            });
+        }
+    }
+    
+    // Проверяем домашнюю директорию пользователя
+    if let Some(home_dir) = dirs::home_dir() {
+        if let Ok(writable) = check_directory_writable(home_dir.to_string_lossy().to_string()).await {
+            if writable {
+                writable_dirs.push(WritableDirectory {
+                    path: home_dir.to_string_lossy().to_string(),
+                    name: "Домашняя директория".to_string(),
+                    is_default: false,
+                    available_space: get_available_space(&home_dir).await,
+                });
+            }
+        }
+    }
+    
+    // Проверяем временную директорию
+    if let Some(temp_dir) = std::env::temp_dir().to_str() {
+        let temp_path = Path::new(temp_dir).join("svg-to-dxf-converter");
+        if let Ok(writable) = check_directory_writable(temp_path.to_string_lossy().to_string()).await {
+            if writable {
+                writable_dirs.push(WritableDirectory {
+                    path: temp_path.to_string_lossy().to_string(),
+                    name: "Временная директория".to_string(),
+                    is_default: false,
+                    available_space: get_available_space(&temp_path).await,
+                });
+            }
+        }
+    }
+    
+    // Проверяем директорию документов
+    if let Some(doc_dir) = dirs::document_dir() {
+        if let Ok(writable) = check_directory_writable(doc_dir.to_string_lossy().to_string()).await {
+            if writable {
+                writable_dirs.push(WritableDirectory {
+                    path: doc_dir.to_string_lossy().to_string(),
+                    name: "Документы".to_string(),
+                    is_default: false,
+                    available_space: get_available_space(&doc_dir).await,
+                });
+            }
+        }
+    }
+    
+    // Проверяем директорию рабочего стола
+    if let Some(desktop_dir) = dirs::desktop_dir() {
+        if let Ok(writable) = check_directory_writable(desktop_dir.to_string_lossy().to_string()).await {
+            if writable {
+                writable_dirs.push(WritableDirectory {
+                    path: desktop_dir.to_string_lossy().to_string(),
+                    name: "Рабочий стол".to_string(),
+                    is_default: false,
+                    available_space: get_available_space(&desktop_dir).await,
+                });
+            }
+        }
+    }
+    
+    Ok(writable_dirs)
+}
+
+/// Проверяет доступность системных директорий
+#[command]
+pub async fn check_system_directories() -> Result<SystemDirectoriesCheck, String> {
+    let mut results = Vec::new();
+    
+    // Проверяем домашнюю директорию
+    if let Some(home_dir) = dirs::home_dir() {
+        let home_path = home_dir.to_string_lossy().to_string();
+        let writable = check_directory_writable(home_path.clone()).await.unwrap_or(false);
+        
+        results.push(DirectoryCheckResult {
+            path: home_path,
+            name: "Домашняя директория".to_string(),
+            exists: true,
+            is_directory: true,
+            is_writable: writable,
+            is_readable: true,
+            error: if !writable { Some("Нет прав записи".to_string()) } else { None },
+        });
+    } else {
+        results.push(DirectoryCheckResult {
+            path: "N/A".to_string(),
+            name: "Домашняя директория".to_string(),
+            exists: false,
+            is_directory: false,
+            is_writable: false,
+            is_readable: false,
+            error: Some("Домашняя директория не найдена".to_string()),
+        });
+    }
+    
+    // Проверяем временную директорию
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.to_string_lossy().to_string();
+    let temp_writable = check_directory_writable(temp_path.clone()).await.unwrap_or(false);
+    
+    results.push(DirectoryCheckResult {
+        path: temp_path,
+        name: "Временная директория".to_string(),
+        exists: true,
+        is_directory: true,
+        is_writable: temp_writable,
+        is_readable: true,
+        error: if !temp_writable { Some("Нет прав записи".to_string()) } else { None },
+    });
+    
+    // Проверяем директорию документов
+    if let Some(doc_dir) = dirs::document_dir() {
+        let doc_path = doc_dir.to_string_lossy().to_string();
+        let doc_writable = check_directory_writable(doc_path.clone()).await.unwrap_or(false);
+        
+        results.push(DirectoryCheckResult {
+            path: doc_path,
+            name: "Документы".to_string(),
+            exists: true,
+            is_directory: true,
+            is_writable: doc_writable,
+            is_readable: true,
+            error: if !doc_writable { Some("Нет прав записи".to_string()) } else { None },
+        });
+    } else {
+        results.push(DirectoryCheckResult {
+            path: "N/A".to_string(),
+            name: "Документы".to_string(),
+            exists: false,
+            is_directory: false,
+            is_writable: false,
+            is_readable: false,
+            error: Some("Директория документов не найдена".to_string()),
+        });
+    }
+    
+    // Проверяем директорию рабочего стола
+    if let Some(desktop_dir) = dirs::desktop_dir() {
+        let desktop_path = desktop_dir.to_string_lossy().to_string();
+        let desktop_writable = check_directory_writable(desktop_path.clone()).await.unwrap_or(false);
+        
+        results.push(DirectoryCheckResult {
+            path: desktop_path,
+            name: "Рабочий стол".to_string(),
+            exists: true,
+            is_directory: true,
+            is_writable: desktop_writable,
+            is_readable: true,
+            error: if !desktop_writable { Some("Нет прав записи".to_string()) } else { None },
+        });
+    } else {
+        results.push(DirectoryCheckResult {
+            path: "N/A".to_string(),
+            name: "Рабочий стол".to_string(),
+            exists: false,
+            is_directory: false,
+            is_writable: false,
+            is_readable: false,
+            error: Some("Рабочий стол не найден".to_string()),
+        });
+    }
+    
+    let total_dirs = results.len();
+    let accessible_dirs = results.iter().filter(|r| r.exists && r.is_writable).count();
+    let readonly_dirs = results.iter().filter(|r| r.exists && !r.is_writable).count();
+    
+    Ok(SystemDirectoriesCheck {
+        results,
+        summary: SystemDirectoriesSummary {
+            total_directories: total_dirs,
+            accessible_directories: accessible_dirs,
+            readonly_directories: readonly_dirs,
+            missing_directories: total_dirs - accessible_dirs - readonly_dirs,
+            has_write_access: accessible_dirs > 0,
+        },
+    })
+}
+
+/// Получает доступное место на диске
+async fn get_available_space(_path: &Path) -> Option<u64> {
+    // В реальном приложении здесь можно использовать системные вызовы
+    // Для примера возвращаем фиксированное значение
+    Some(1024 * 1024 * 1024) // 1GB
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FilePermissions {
+    pub path: String,
+    pub can_read: bool,
+    pub can_write: bool,
+    pub can_execute: bool,
+    pub is_readonly: bool,
+    pub is_directory: bool,
+    pub file_size: Option<u64>,
+    pub modified_time: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WritableDirectory {
+    pub path: String,
+    pub name: String,
+    pub is_default: bool,
+    pub available_space: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DirectoryCheckResult {
+    pub path: String,
+    pub name: String,
+    pub exists: bool,
+    pub is_directory: bool,
+    pub is_writable: bool,
+    pub is_readable: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SystemDirectoriesCheck {
+    pub results: Vec<DirectoryCheckResult>,
+    pub summary: SystemDirectoriesSummary,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SystemDirectoriesSummary {
+    pub total_directories: usize,
+    pub accessible_directories: usize,
+    pub readonly_directories: usize,
+    pub missing_directories: usize,
+    pub has_write_access: bool,
+}
