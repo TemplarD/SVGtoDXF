@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to DXF Converter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            height: 90vh;
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 200px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        button:hover::before {
+            left: 100%;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #6366f1, #8b5cf6); 
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-secondary { 
+            background: linear-gradient(135deg, #ec4899, #f43f5e); 
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        button:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+            transform: none;
+            box-shadow: none;
+        }
+        .status-message {
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            font-weight: 500;
+            text-align: center;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .status-info { background: #e0f2fe; color: #0369a1; }
+        .status-success { background: #dcfce7; color: #166534; }
+        .status-error { background: #fef2f2; color: #dc2626; }
+        .status-warning { background: #fef3c7; color: #92400e; }
+        .file-list {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+        .file-list.hidden { display: none; }
+        .file-list-title {
+            font-weight: bold;
+            color: #6b7280;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 3px;
+            border: 1px solid #e5e7eb;
+        }
+        .file-name { font-weight: bold; }
+        .file-status { 
+            font-size: 14px; 
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 100px;
+            justify-content: center;
+        }
+        .status-pending { 
+            background: #f3f4f6; 
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+        .status-reading { 
+            background: #dbeafe; 
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+            animation: pulse 2s infinite;
+        }
+        .status-processing { 
+            background: #fef3c7; 
+            color: #92400e;
+            border: 1px solid #fde68a;
+            animation: spin 1s linear infinite;
+        }
+        .status-completed { 
+            background: #dcfce7; 
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .status-error { 
+            background: #fef2f2; 
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+        }
+        .output-folder {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .output-folder.hidden { display: none; }
+        .output-folder-text {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .output-folder-path {
+            font-family: monospace;
+            background: white;
+            padding: 8px;
+            border-radius: 3px;
+            border: 1px solid #e5e7eb;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress-bar.hidden { display: none; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 12px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+        
+        /* Кастомные диалоги */
+        .custom-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 10000;
+        }
+        .custom-dialog.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dialog-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dialog-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .dialog-body {
+            margin-bottom: 15px;
+        }
+        .dialog-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .file-browser {
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .file-item {
+            padding: 8px;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-item:hover {
+            background: #f9fafb;
+        }
+        .file-item.selected {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+        .folder-path {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #f9fafb;
+            border-radius: 5px;
+        }
+        .nav-button {
+            padding: 5px 10px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .nav-button:hover {
+            background: #f3f4f6;
+        }
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9999;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .debug-panel.hidden { display: none; }
+        .debug-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SVG to DXF Converter</h1>
+        
+        <div id="statusMessage" class="status-message status-info">
+            🚀 Загрузка приложения...
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" id="selectFilesBtn">
+                📁 Выбрать файлы
+            </button>
+            <button class="btn-secondary" id="selectFolderBtn">
+                📂 Выбрать папку
+            </button>
+            <button class="btn-secondary" id="convertBtn">
+                🔄 Конвертировать
+            </button>
+        </div>
+
+        <div id="fileList" class="file-list hidden">
+            <div class="file-list-title">
+                📋 Выбранные файлы:
+            </div>
+            <div class="info-text" style="font-size: 12px; color: #9ca3af; margin-bottom: 10px;">
+                💡 DXF файлы сохранятся в тех же папках
+            </div>
+            <div id="fileItems"></div>
+        </div>
+
+        <div id="progressBar" class="progress-bar hidden">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <!-- Кастомные диалоги -->
+    <div id="fileDialog" class="custom-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">Выберите SVG файлы</div>
+            <div class="dialog-body">
+                <div class="folder-path" id="currentPath">
+                    📁 /home
+                </div>
+                <div class="file-browser" id="fileBrowser">
+                    <!-- Файлы и папки будут добавлены через JavaScript -->
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="nav-button" onclick="customDialog.cancel()">Отмена</button>
+                <button class="nav-button" onclick="customDialog.select()">Выбрать</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="folderDialog" class="custom-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">Выберите папку с SVG файлами</div>
+            <div class="dialog-body">
+                <div class="folder-path" id="folderCurrentPath">
+                    📁 /home
+                </div>
+                <div class="file-browser" id="folderBrowser">
+                    <!-- Файлы и папки будут добавлены через JavaScript -->
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="nav-button" onclick="customFolderDialog.cancel()">Отмена</button>
+                <button class="nav-button" onclick="customFolderDialog.select()">Выбрать</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Глобальные переменные
+        let selectedFiles = [];
+        let conversionInProgress = false;
+        let debugMode = false;
+
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = `status-message status-${type}`;
+        }
+
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            
+            progressBar.classList.remove('hidden');
+            const percentage = (current / total) * 100;
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        function debugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            console.log(logEntry);
+        }
+
+        // Кастомные диалоги для выбора файлов с РАБОЧЕЙ файловой системой
+        const customDialog = {
+            currentPath: '/',
+            selectedFiles: [],
+            
+            show: function() {
+                debugLog('🔧 Показываем кастомный диалог выбора файлов', 'info');
+                const dialog = document.getElementById('fileDialog');
+                if (dialog) {
+                    dialog.classList.add('active');
+                    this.loadFiles(this.currentPath);
+                } else {
+                    debugLog('❌ Диалог файлов не найден', 'error');
+                }
+            },
+            
+            hide: function() {
+                const dialog = document.getElementById('fileDialog');
+                if (dialog) {
+                    dialog.classList.remove('active');
+                }
+            },
+            
+            cancel: function() {
+                debugLog('❌ Кнопка ОТМЕНА нажата', 'info');
+                this.selectedFiles = [];
+                this.hide();
+                updateStatus('📁 Выбор файлов отменен', 'info');
+                debugLog('✅ Диалог закрыт, выбор отменен', 'info');
+            },
+            
+            select: function() {
+                debugLog(`✅ Кнопка ВЫБРАТЬ нажата, выбрано файлов: ${this.selectedFiles.length}`, 'info');
+                if (this.selectedFiles.length > 0) {
+                    selectedFiles = this.selectedFiles.map(f => f.path);
+                    updateFileList();
+                    updateStatus(`📁 Выбрано файлов: ${this.selectedFiles.length}`, 'success');
+                    showConvertControls();
+                    debugLog('✅ Файлы выбраны и добавлены в список', 'success');
+                } else {
+                    updateStatus('📁 Файлы не выбраны', 'info');
+                    debugLog('⚠️ Ни один файл не был выбран', 'warning');
+                }
+                this.hide();
+                debugLog('✅ Диалог закрыт', 'info');
+            },
+            
+            loadFiles: async function(path) {
+                debugLog(`📂 Загрузка файлов из: ${path}`, 'info');
+                try {
+                    let items;
+                    
+                    // Используем Tauri команды
+                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
+                        debugLog('🔧 Используем Tauri API', 'info');
+                        try {
+                            items = await window.__TAURI__.invoke('list_directory', { path });
+                            debugLog(`📁 Получено ${items.length} элементов`, 'info');
+                            debugLog('📁 Элементы: ' + JSON.stringify(items), 'info');
+                        } catch (invokeError) {
+                            debugLog('❌ Ошибка вызова Tauri: ' + invokeError.message, 'error');
+                            return;
+                        }
+                    } else {
+                        debugLog('❌ Tauri API недоступен', 'error');
+                        return;
+                    }
+                    
+                    this.currentPath = path;
+                    const pathElement = document.getElementById('currentPath');
+                    if (pathElement) {
+                        pathElement.innerHTML = `📁 ${path}`;
+                    }
+                    
+                    const browser = document.getElementById('fileBrowser');
+                    if (browser) {
+                        browser.innerHTML = '';
+                        
+                        // Кнопка навигации вверх
+                        if (path !== '/') {
+                            const upItem = document.createElement('div');
+                            upItem.className = 'file-item';
+                            upItem.innerHTML = '⬆️ ..';
+                            upItem.onclick = () => this.navigateUp();
+                            browser.appendChild(upItem);
+                            debugLog('✅ Добавлена кнопка навигации вверх', 'info');
+                        }
+                        
+                        // Отображение файлов и папок
+                        items.forEach((item, index) => {
+                            debugLog(`📁 Элемент ${index}: ${item.name} (${item.item_type})`, 'info');
+                            const itemElement = document.createElement('div');
+                            itemElement.className = 'file-item';
+                            
+                            if (item.item_type === 'dir') {
+                                itemElement.innerHTML = `📁 ${item.name}`;
+                                itemElement.onclick = () => {
+                                    debugLog(`🔄 Переход в папку: ${item.path}`, 'info');
+                                    this.loadFiles(item.path);
+                                };
+                            } else if (item.name.endsWith('.svg')) {
+                                itemElement.innerHTML = `📄 ${item.name}`;
+                                itemElement.onclick = () => this.toggleFile(item);
+                            }
+                            
+                            browser.appendChild(itemElement);
+                        });
+                        
+                        debugLog(`✅ Отображено ${items.length} элементов`, 'info');
+                    }
+                } catch (error) {
+                    debugLog(`❌ Ошибка загрузки файлов: ${error.message}`, 'error');
+                }
+            },
+            
+            navigateUp: function() {
+                debugLog('⬆️ Навигация вверх из: ' + this.currentPath, 'info');
+                
+                // Кроссплатформенная навигация вверх
+                let parentPath;
+                
+                if (this.currentPath.includes('\\')) {
+                    // Windows путь
+                    const parts = this.currentPath.split('\\');
+                    if (parts.length > 2) {
+                        parts.pop();
+                        parentPath = parts.join('\\');
+                    } else {
+                        parentPath = this.currentPath; // Корень диска
+                    }
+                } else {
+                    // Unix путь
+                    const parts = this.currentPath.split('/').filter(p => p);
+                    parts.pop();
+                    parentPath = '/' + parts.join('/');
+                    if (parentPath === '/') {
+                        parentPath = this.currentPath; // Остаемся в корне
+                    }
+                }
+                
+                debugLog('📂 Переход в: ' + (parentPath || this.currentPath), 'info');
+                this.loadFiles(parentPath || this.currentPath);
+            },
+            
+            toggleFile: function(file) {
+                const index = this.selectedFiles.findIndex(f => f.path === file.path);
+                if (index > -1) {
+                    this.selectedFiles.splice(index, 1);
+                    debugLog(`❌ Удален файл: ${file.name}`, 'info');
+                } else {
+                    this.selectedFiles.push(file);
+                    debugLog(`✅ Добавлен файл: ${file.name}`, 'info');
+                }
+                this.updateSelection();
+            },
+            
+            updateSelection: function() {
+                const items = document.querySelectorAll('#fileBrowser .file-item');
+                items.forEach(item => {
+                    const fileName = item.textContent.replace('📄 ', '').replace('📁 ', '').replace('⬆️ ..', '');
+                    const isSelected = this.selectedFiles.some(f => f.name === fileName && f.name.endsWith('.svg'));
+                    if (isSelected) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+        };
+        
+        // Кастомный диалог для выбора папок
+        const customFolderDialog = {
+            currentPath: '/',
+            selectedPath: '',
+            
+            show: function() {
+                debugLog('🔧 Показываем кастомный диалог выбора папки', 'info');
+                const dialog = document.getElementById('folderDialog');
+                if (dialog) {
+                    dialog.classList.add('active');
+                    this.loadFolders(this.currentPath);
+                } else {
+                    debugLog('❌ Диалог папок не найден', 'error');
+                }
+            },
+            
+            hide: function() {
+                const dialog = document.getElementById('folderDialog');
+                if (dialog) {
+                    dialog.classList.remove('active');
+                }
+            },
+            
+            cancel: function() {
+                debugLog('❌ Отмена выбора папки', 'info');
+                this.selectedPath = '';
+                this.hide();
+                updateStatus('📂 Выбор папки отменен', 'info');
+            },
+            
+            select: async function() {
+                debugLog(`✅ Выбрана папка: ${this.selectedPath}`, 'info');
+                if (this.selectedPath) {
+                    // Ищем SVG файлы в выбранной папке
+                    let svgFiles;
+                    
+                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
+                        svgFiles = await window.__TAURI__.invoke('get_svg_files_in_directory', { path: this.selectedPath });
+                    } else {
+                        debugLog('⚠️ Tauri API недоступен', 'error');
+                        return;
+                    }
+                    
+                    selectedFiles = svgFiles;
+                    updateFileList();
+                    updateStatus(`📂 Найдено файлов: ${svgFiles.length}`, 'success');
+                    showConvertControls();
+                    debugLog('📂 Папка выбрана и файлы добавлены в список', 'success');
+                } else {
+                    updateStatus('📂 Папка не выбрана', 'info');
+                    debugLog('⚠️ Ни одна папка не была выбрана', 'warning');
+                }
+                this.hide();
+            },
+            
+            loadFolders: async function(path) {
+                debugLog(`📂 Загрузка папок из: ${path}`, 'info');
+                try {
+                    let items;
+                    
+                    // Используем Tauri команды
+                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
+                        debugLog('🔧 Используем Tauri API', 'info');
+                        items = await window.__TAURI__.invoke('list_directory', { path });
+                        debugLog(`📁 Получено ${items.length} элементов`, 'info');
+                    } else {
+                        debugLog('⚠️ Tauri API недоступен', 'error');
+                        return;
+                    }
+                    
+                    // Фильтруем только папки
+                    const folders = items.filter(item => item.item_type === 'dir');
+                    
+                    this.currentPath = path;
+                    const pathElement = document.getElementById('folderCurrentPath');
+                    if (pathElement) {
+                        pathElement.innerHTML = `📁 ${path}`;
+                    }
+                    
+                    const browser = document.getElementById('folderBrowser');
+                    if (browser) {
+                        browser.innerHTML = '';
+                        
+                        // Кнопка навигации вверх
+                        if (path !== '/') {
+                            const upItem = document.createElement('div');
+                            upItem.className = 'file-item';
+                            upItem.innerHTML = '⬆️ ..';
+                            upItem.onclick = () => this.navigateUp();
+                            browser.appendChild(upItem);
+                        }
+                        
+                        // Отображение папок
+                        folders.forEach(folder => {
+                            const item = document.createElement('div');
+                            item.className = 'file-item';
+                            item.innerHTML = `📁 ${folder.name}`;
+                            item.onclick = () => this.selectFolder(folder);
+                            browser.appendChild(item);
+                        });
+                    }
+                } catch (error) {
+                    debugLog(`Ошибка загрузки папок: ${error.message}`, 'error');
+                }
+            },
+            
+            navigateUp: function() {
+                debugLog('⬆️ Навигация вверх из: ' + this.currentPath, 'info');
+                
+                // Кроссплатформенная навигация вверх
+                let parentPath;
+                
+                if (this.currentPath.includes('\\')) {
+                    // Windows путь
+                    const parts = this.currentPath.split('\\');
+                    if (parts.length > 2) {
+                        parts.pop();
+                        parentPath = parts.join('\\');
+                    } else {
+                        parentPath = this.currentPath; // Корень диска
+                    }
+                } else {
+                    // Unix путь
+                    const parts = this.currentPath.split('/').filter(p => p);
+                    parts.pop();
+                    parentPath = '/' + parts.join('/');
+                    if (parentPath === '/') {
+                        parentPath = this.currentPath; // Остаемся в корне
+                    }
+                }
+                
+                debugLog('📂 Переход в: ' + (parentPath || this.currentPath), 'info');
+                this.loadFolders(parentPath || this.currentPath);
+            },
+            
+            selectFolder: function(folder) {
+                debugLog(`📁 Выбрана папка: ${folder.name}`, 'info');
+                this.selectedPath = folder.path;
+                this.updateSelection();
+            },
+            
+            updateSelection: function() {
+                const items = document.querySelectorAll('#folderBrowser .file-item');
+                items.forEach(item => {
+                    const folderName = item.textContent.replace('📁 ', '').replace('⬆️ ..', '');
+                    const isSelected = this.selectedPath.includes(folderName) && folderName !== '..';
+                    if (isSelected) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+        };
+
+        // Функция переключения отладки
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const debugPanel = document.getElementById('debugPanel');
+            const debugToggle = document.querySelector('.debug-toggle');
+            
+            if (debugMode) {
+                debugPanel.classList.remove('hidden');
+                debugToggle.textContent = '🐛 ON';
+                debugToggle.style.background = '#10b981';
+                debugLog('🐛 Дебаг режим включен', 'success');
+            } else {
+                debugPanel.classList.add('hidden');
+                debugToggle.textContent = '🐛';
+                debugToggle.style.background = '#ef4444';
+                debugLog('🐛 Дебаг режим выключен', 'warning');
+            }
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            const fileItems = document.getElementById('fileItems');
+            
+            if (selectedFiles.length === 0) {
+                fileList.classList.add('hidden');
+                return;
+            }
+
+            fileList.classList.remove('hidden');
+            fileItems.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                const fileName = file.split('/').pop() || file;
+                const filePath = file.substring(0, file.lastIndexOf('/'));
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div>
+                        <div class="file-name">${fileName}</div>
+                        <div class="file-path" style="font-size: 12px; color: #6b7280; margin-top: 2px;">${filePath}</div>
+                    </div>
+                    <span class="file-status status-pending" id="file-status-${index}">
+                        <span class="status-icon">⏸️</span>
+                        <span>Ожидание</span>
+                    </span>
+                `;
+                fileItems.appendChild(fileItem);
+            });
+            
+            debugLog(`Список файлов обновлен: ${selectedFiles.length} файлов`, 'success');
+        }
+
+        function showConvertControls() {
+            const convertBtn = document.getElementById('convertBtn');
+            if (selectedFiles.length > 0) {
+                convertBtn.disabled = false;
+                debugLog('Кнопка конвертации активирована', 'success');
+            } else {
+                convertBtn.disabled = true;
+                debugLog('Кнопка конвертации деактивирована', 'info');
+            }
+        }
+
+        // Демо-функции
+        function enableDemoMode() {
+            debugLog('🟢 Включение режима работы', 'info');
+            updateStatus('✅ Приложение готово к работе', 'success');
+            
+            // Делаем кнопки выбора активными, а конвертацию заблокированной
+            document.getElementById('selectFilesBtn').disabled = false;
+            document.getElementById('selectFolderBtn').disabled = false;
+            document.getElementById('convertBtn').disabled = true;
+            
+            debugLog('Кнопки выбора активированы, конвертация заблокирована', 'success');
+        }
+
+        function demoSelectFiles() {
+            debugLog('🟢 НАЖАТА кнопка выбора файлов', 'info');
+            // Файлы появятся только когда пользователь выберет их через диалог
+            updateStatus('📁 Ожидание выбора файлов...', 'info');
+        }
+
+        function demoSelectFolder() {
+            debugLog('🟢 НАЖАТА кнопка выбора папки', 'info');
+            // Файлы появятся только когда пользователь выберет папку через диалог
+            updateStatus('📂 Ожидание выбора папки...', 'info');
+        }
+
+        function demoStartConversion() {
+            debugLog('🟢 НАЖАТА кнопка конвертации', 'info');
+            
+            if (conversionInProgress) {
+                updateStatus('⏳ Конвертация уже выполняется...', 'info');
+                return;
+            }
+            
+            if (!selectedFiles || selectedFiles.length === 0) {
+                updateStatus('❌ Сначала выберите файлы', 'error');
+                return;
+            }
+
+            conversionInProgress = true;
+            updateStatus('🔄 Демо-конвертация...', 'info');
+            
+            document.getElementById('convertBtn').disabled = true;
+            document.getElementById('selectFilesBtn').disabled = true;
+            document.getElementById('selectFolderBtn').disabled = true;
+            document.getElementById('progressBar').classList.remove('hidden');
+
+            // Демо-процесс конвертации
+            let current = 0;
+            const total = selectedFiles.length;
+            
+            const interval = setInterval(() => {
+                current++;
+                updateProgress(current, total);
+                updateStatus(`🔄 Обработка файла ${current}/${total}`, 'info');
+                
+                // Обновляем статус файла
+                const index = current - 1;
+                const statusElement = document.getElementById(`file-status-${index}`);
+                if (statusElement) {
+                    // Этап 1: Чтение файла
+                    statusElement.className = 'file-status status-reading';
+                    statusElement.innerHTML = `
+                        <span class="status-icon">📖</span>
+                        <span>Чтение...</span>
+                    `;
+                    
+                    // Этап 2: Конвертация (через 500мс)
+                    setTimeout(() => {
+                        statusElement.className = 'file-status status-processing';
+                        statusElement.innerHTML = `
+                            <span class="status-icon">⚙️</span>
+                            <span>В процессе...</span>
+                        `;
+                        
+                        // Этап 3: Завершение (через 1000мс)
+                        setTimeout(() => {
+                            statusElement.className = 'file-status status-completed';
+                            statusElement.innerHTML = `
+                                <span class="status-icon">✅</span>
+                                <span>DXF</span>
+                            `;
+                        }, 1000);
+                    }, 500);
+                }
+                
+                if (current >= total) {
+                    clearInterval(interval);
+                    updateStatus('✅ Конвертация завершена! DXF файлы сохранены в папки с исходными файлами', 'success');
+                    conversionInProgress = false;
+                    document.getElementById('convertBtn').disabled = false;
+                    document.getElementById('selectFilesBtn').disabled = false;
+                    document.getElementById('selectFolderBtn').disabled = false;
+                    
+                    setTimeout(() => {
+                        document.getElementById('progressBar').classList.add('hidden');
+                    }, 2000);
+                }
+            }, 2000);
+        }
+
+        // Основные функции для работы с Tauri API
+        async function selectFiles() {
+            debugLog('🔵 ФУНКЦИЯ selectFiles вызвана', 'info');
+            updateStatus('📁 Ожидание выбора файлов...', 'info');
+            
+            try {
+                // Пробуем системные диалоги
+                let files;
+                
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    debugLog('Используем системный диалог window.__TAURI__.core.invoke', 'info');
+                    files = await window.__TAURI__.core.invoke('select_files');
+                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
+                    debugLog('Используем системный диалог window.__TAURI__.invoke', 'info');
+                    files = await window.__TAURI__.invoke('select_files');
+                } else {
+                    throw new Error('Системные диалоги не доступны');
+                }
+                
+                if (files && files.length > 0) {
+                    selectedFiles = files;
+                    updateFileList();
+                    updateStatus(`📁 Выбрано файлов: ${files.length}`, 'success');
+                    showConvertControls();
+                } else {
+                    updateStatus('📁 Файлы не выбраны', 'info');
+                }
+            } catch (error) {
+                debugLog(`Системные диалоги не работают, используем кастомные: ${error.message}`, 'warning');
+                // Используем кастомный диалог
+                customDialog.show();
+            }
+        }
+
+        async function selectFolder() {
+            debugLog('🔵 ФУНКЦИЯ selectFolder вызвана', 'info');
+            updateStatus('📂 Ожидание выбора папки...', 'info');
+            
+            try {
+                // Пробуем системные диалоги
+                let files;
+                
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    debugLog('Используем системный диалог window.__TAURI__.core.invoke', 'info');
+                    files = await window.__TAURI__.core.invoke('select_folder');
+                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
+                    debugLog('Используем системный диалог window.__TAURI__.invoke', 'info');
+                    files = await window.__TAURI__.invoke('select_folder');
+                } else {
+                    throw new Error('Системные диалоги не доступны');
+                }
+                
+                if (files && files.length > 0) {
+                    selectedFiles = files;
+                    updateFileList();
+                    updateStatus(`📂 Найдено файлов: ${files.length}`, 'success');
+                    showConvertControls();
+                } else {
+                    updateStatus('📂 Файлы не найдены', 'info');
+                }
+            } catch (error) {
+                debugLog(`Системные диалоги не работают, используем кастомные: ${error.message}`, 'warning');
+                // Используем кастомный диалог
+                customFolderDialog.show();
+            }
+        }
+
+        async function startConversion() {
+            debugLog('🔵 ФУНКЦИЯ startConversion вызвана', 'info');
+            
+            if (conversionInProgress) {
+                updateStatus('⏳ Конвертация уже выполняется...', 'info');
+                return;
+            }
+            
+            if (!selectedFiles || selectedFiles.length === 0) {
+                updateStatus('❌ Сначала выберите файлы', 'error');
+                return;
+            }
+
+            conversionInProgress = true;
+            updateStatus('🔄 Начало конвертации...', 'info');
+            
+            document.getElementById('convertBtn').disabled = true;
+            document.getElementById('selectFilesBtn').disabled = true;
+            document.getElementById('selectFolderBtn').disabled = true;
+            document.getElementById('progressBar').classList.remove('hidden');
+
+            try {
+                // Пробуем разные варианты вызова для Tauri v2
+                let result;
+                
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    debugLog('Используем window.__TAURI__.core.invoke для конвертации', 'info');
+                    result = await window.__TAURI__.core.invoke('convert_svg_to_dxf', { files: selectedFiles });
+                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
+                    debugLog('Используем window.__TAURI__.invoke для конвертации', 'info');
+                    result = await window.__TAURI__.invoke('convert_svg_to_dxf', { files: selectedFiles });
+                } else {
+                    throw new Error('Tauri API не доступен');
+                }
+                
+                updateStatus(`✅ Конвертация завершена! ${result}`, 'success');
+            } catch (error) {
+                debugLog(`Ошибка конвертации: ${error.message}`, 'error');
+                updateStatus('❌ Ошибка конвертации', 'error');
+            } finally {
+                conversionInProgress = false;
+                document.getElementById('convertBtn').disabled = false;
+                document.getElementById('selectFilesBtn').disabled = false;
+                document.getElementById('selectFolderBtn').disabled = false;
+                
+                setTimeout(() => {
+                    document.getElementById('progressBar').classList.add('hidden');
+                }, 2000);
+            }
+        }
+
+        // Обработчики событий
+        function setupEventListeners() {
+            debugLog('🔧 Настройка обработчиков событий', 'info');
+            
+            const selectFilesBtn = document.getElementById('selectFilesBtn');
+            const selectFolderBtn = document.getElementById('selectFolderBtn');
+            const convertBtn = document.getElementById('convertBtn');
+            
+            debugLog(`🔍 Проверка кнопок: files=${!!selectFilesBtn}, folder=${!!selectFolderBtn}, convert=${!!convertBtn}`, 'info');
+            
+            if (selectFilesBtn) {
+                selectFilesBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    debugLog('🟡 КНОПКА ВЫБОРА ФАЙЛОВ НАЖАТА!', 'info');
+                    console.log('Кнопка выбора файлов нажата!');
+                    // СРАЗУ вызываем кастомный диалог
+                    customDialog.show();
+                });
+                debugLog('✅ Обработчик кнопки выбора файлов добавлен', 'success');
+            } else {
+                debugLog('❌ Кнопка выбора файлов НЕ НАЙДЕНА', 'error');
+            }
+            
+            if (selectFolderBtn) {
+                selectFolderBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    debugLog('🟡 КНОПКА ВЫБОРА ПАПКИ НАЖАТА!', 'info');
+                    console.log('Кнопка выбора папки нажата!');
+                    // СРАЗУ вызываем кастомный диалог
+                    customFolderDialog.show();
+                });
+                debugLog('✅ Обработчик кнопки выбора папки добавлен', 'success');
+            } else {
+                debugLog('❌ Кнопка выбора папки НЕ НАЙДЕНА', 'error');
+            }
+            
+            if (convertBtn) {
+                convertBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    debugLog('🟡 КНОПКА КОНВЕРТАЦИИ НАЖАТА!', 'info');
+                    console.log('Кнопка конвертации нажата!');
+                    startConversion();
+                });
+                debugLog('✅ Обработчик кнопки конвертации добавлен', 'success');
+            } else {
+                debugLog('❌ Кнопка конвертации НЕ НАЙДЕНА', 'error');
+            }
+            
+            // Проверяем кнопки в диалогах
+            setTimeout(() => {
+                const fileCancelBtn = document.querySelector('#fileDialog .cancel-btn');
+                const fileSelectBtn = document.querySelector('#fileDialog .select-btn');
+                const folderCancelBtn = document.querySelector('#folderDialog .cancel-btn');
+                const folderSelectBtn = document.querySelector('#folderDialog .select-btn');
+                
+                debugLog(`🔍 Кнопки диалогов: fileCancel=${!!fileCancelBtn}, fileSelect=${!!fileSelectBtn}, folderCancel=${!!folderCancelBtn}, folderSelect=${!!folderSelectBtn}`, 'info');
+                
+                if (fileCancelBtn) {
+                    debugLog('✅ Кнопка отмены файлов найдена', 'success');
+                } else {
+                    debugLog('❌ Кнопка отмены файлов НЕ НАЙДЕНА', 'error');
+                }
+                
+                if (fileSelectBtn) {
+                    debugLog('✅ Кнопка выбора файлов найдена', 'success');
+                } else {
+                    debugLog('❌ Кнопка выбора файлов НЕ НАЙДЕНА', 'error');
+                }
+            }, 1000);
+        }
+
+        // Тестовая функция для принудительного показа диалога
+        window.testDialog = function() {
+            console.log('Тестовый вызов диалога файлов');
+            debugLog('🧪 ТЕСТ: Принудительный показ диалога файлов', 'info');
+            customDialog.show();
+        };
+        
+        window.testFolderDialog = function() {
+            console.log('Тестовый вызов диалога папок');
+            debugLog('🧪 ТЕСТ: Принудительный показ диалога папок', 'info');
+            customFolderDialog.show();
+        };
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', async () => {
+            debugLog('🚀 DOM загружен, начинаю инициализацию', 'info');
+            console.log('DOM загружен, начинаю инициализацию');
+            
+            // СНАЧАЛА добавляем обработчики событий
+            setupEventListeners();
+            
+            // ВСЕГДА используем кастомные диалоги в Tauri приложении
+            debugLog('🔧 Используем кастомные диалоги для Tauri приложения', 'info');
+            updateStatus('✅ Приложение готово к работе', 'success');
+            
+            // Используем кастомные функции вместо Tauri
+            window.selectFiles = customDialog.show;
+            window.selectFolder = customFolderDialog.show;
+            window.startConversion = startConversion;
+            
+            debugLog('✅ Кастомные функции назначены', 'success');
+            
+            debugLog('✅ Инициализация завершена', 'success');
+            console.log('Инициализация завершена');
+            
+            // Добавляем тестовые функции в глобальную область
+            console.log('Тестовые функции доступны: testDialog(), testFolderDialog()');
+        });
+
+        // Функция обновления статуса файла
+        function updateFileStatus(filePath, status) {
+            const index = selectedFiles.findIndex(file => file === filePath);
+            if (index !== -1) {
+                const statusElement = document.getElementById(`file-status-${index}`);
+                if (statusElement) {
+                    if (status === 'reading') {
+                        statusElement.className = 'file-status status-reading';
+                        statusElement.innerHTML = `
+                            <span class="status-icon">📖</span>
+                            <span>Чтение...</span>
+                        `;
+                    } else if (status === 'processing') {
+                        statusElement.className = 'file-status status-processing';
+                        statusElement.innerHTML = `
+                            <span class="status-icon">⚙️</span>
+                            <span>В процессе...</span>
+                        `;
+                    } else if (status === 'completed') {
+                        statusElement.className = 'file-status status-completed';
+                        statusElement.innerHTML = `
+                            <span class="status-icon">✅</span>
+                            <span>DXF</span>
+                        `;
+                    } else if (status === 'error') {
+                        statusElement.className = 'file-status status-error';
+                        statusElement.innerHTML = `
+                            <span class="status-icon">❌</span>
+                            <span>Ошибка</span>
+                        `;
+                    }
+                }
+            }
+        }
+        
+        // Debug Mode Functions
+        // Обработчик нажатия F12
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'F12') {
+                event.preventDefault();
+                toggleDebugMode();
+            }
+        });
+        
+        // Переключение дебаг режима
+        function toggleDebugMode() {
+            debugMode = !debugMode;
+            const panel = document.getElementById('debug-panel');
+            
+            if (debugMode) {
+                panel.style.display = 'block';
+                updateDebugPanel();
+                logMessage('INFO', 'DEBUG', 'Дебаг режим активирован');
+                debugLog('🔧 Дебаг режим активирован', 'info');
+            } else {
+                panel.style.display = 'none';
+                logMessage('INFO', 'DEBUG', 'Дебаг режим деактивирован');
+                debugLog('🔧 Дебаг режим деактивирован', 'info');
+            }
+        }
+        
+        // Переключение панели дебага
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debug-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Обновление дебаг панели
+        function updateDebugPanel() {
+            const content = document.getElementById('debug-content');
+            const timestamp = new Date().toLocaleString();
+            
+            content.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <strong>Статус:</strong> <span style="color: #4CAF50;">Активен</span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Время:</strong> ${timestamp}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Выбранных файлов:</strong> ${selectedFiles.length}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Текущая папка:</strong> ${currentFolder || 'Не выбрана'}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Tauri API:</strong> ${window.__TAURI__ ? 'Доступен' : 'Недоступен'}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Система:</strong> ${navigator.platform}
+                </div>
+            `;
+        }
+        
+        // Создание дебаг отчета
+        async function createDebugReport(mode = 'USER') {
+            try {
+                debugLog('📋 Создание дебаг отчета...', 'info');
+                
+                if (!window.__TAURI__) {
+                    throw new Error('Tauri API недоступен');
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                const report = await invoke('create_debug_report', { mode });
+                
+                debugLog(`✅ Отчет создан: ${report}`, 'success');
+                alert(`Дебаг отчет создан!\nРежим: ${mode}\nФайл: ${report}`);
+                
+                // Обновляем панель
+                updateDebugPanel();
+                
+            } catch (error) {
+                debugLog(`❌ Ошибка создания отчета: ${error.message}`, 'error');
+                console.error('Ошибка создания отчета:', error);
+            }
+        }
+        
+        // Запуск автотеста
+        async function runAutotest() {
+            try {
+                debugLog('🧪 Запуск автотеста...', 'info');
+                
+                if (!window.__TAURI__) {
+                    throw new Error('Tauri API недоступен');
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                const result = await invoke('run_autotest');
+                
+                debugLog(`✅ Автотест завершен`, 'success');
+                debugLog(`📊 Пройдено: ${result.passed_tests}/${result.total_tests}`, 'info');
+                
+                // Показываем результаты
+                const message = `
+Автотест завершен!
+
+Результаты:
+- Всего тестов: ${result.total_tests}
+- Пройдено: ${result.passed_tests}
+- Провалено: ${result.failed_tests}
+- Критических проблем: ${result.critical_issues}
+
+Рекомендации:
+${result.recommendations.join('\n')}
+                `;
+                
+                alert(message);
+                
+            } catch (error) {
+                debugLog(`❌ Ошибка автотеста: ${error.message}`, 'error');
+                console.error('Ошибка автотеста:', error);
+            }
+        }
+        
+        // Просмотр логов
+        async function viewLogs() {
+            try {
+                debugLog('📄 Открытие просмотра логов...', 'info');
+                
+                if (!window.__TAURI__) {
+                    throw new Error('Tauri API недоступен');
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                const logFiles = await invoke('get_log_files');
+                
+                // Обновляем список файлов
+                const select = document.getElementById('log-file-select');
+                select.innerHTML = '<option value="">Выберите файл лога...</option>';
+                
+                logFiles.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file;
+                    option.textContent = file;
+                    select.appendChild(option);
+                });
+                
+                // Показываем модальное окно
+                document.getElementById('log-viewer').style.display = 'block';
+                
+            } catch (error) {
+                debugLog(`❌ Ошибка просмотра логов: ${error.message}`, 'error');
+                console.error('Ошибка просмотра логов:', error);
+            }
+        }
+        
+        // Закрытие просмотра логов
+        function closeLogViewer() {
+            document.getElementById('log-viewer').style.display = 'none';
+        }
+        
+        // Обновление списка файлов логов
+        async function refreshLogFiles() {
+            await viewLogs();
+        }
+        
+        // Загрузка содержимого лог файла
+        document.getElementById('log-file-select').addEventListener('change', async function(event) {
+            const filename = event.target.value;
+            const content = document.getElementById('log-content');
+            
+            if (!filename) {
+                content.textContent = 'Выберите файл лога для просмотра...';
+                return;
+            }
+            
+            try {
+                content.textContent = 'Загрузка...';
+                
+                if (!window.__TAURI__) {
+                    throw new Error('Tauri API недоступен');
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                const logContent = await invoke('read_log_file', { filename });
+                
+                content.textContent = logContent;
+                
+            } catch (error) {
+                content.textContent = `Ошибка загрузки: ${error.message}`;
+                console.error('Ошибка загрузки лога:', error);
+            }
+        });
+        
+        // Запись сообщения в лог
+        async function logMessage(level, category, message, details = null) {
+            try {
+                if (!window.__TAURI__) return;
+                
+                const { invoke } = window.__TAURI__.core;
+                await invoke('write_log', {
+                    level,
+                    category,
+                    message,
+                    details
+                });
+            } catch (error) {
+                console.error('Ошибка записи в лог:', error);
+            }
+        }
+        
+        // Автоматическое обновление дебаг панели каждые 5 секунд
+        setInterval(() => {
+            if (debugMode) {
+                updateDebugPanel();
+            }
+        }, 5000);
+        
+        // Программный активатор дебаг режима для ИИ
+        window.activateDebugMode = function(mode = 'AI') {
+            if (!debugMode) {
+                toggleDebugMode();
+            }
+            
+            logMessage('INFO', 'AI', 'Программная активация дебаг режима', `Режим: ${mode}`);
+            debugLog(`🤖 Дебаг режим активирован программно (режим: ${mode})`, 'info');
+            
+            // Если AI режим, создаем автоматический отчет
+            if (mode === 'AI') {
+                setTimeout(() => {
+                    createDebugReport('AI');
+                }, 1000);
+            }
+            
+            return {
+                success: true,
+                mode: mode,
+                debugActive: debugMode,
+                timestamp: new Date().toISOString()
+            };
+        };
+        
+        // Функция для программного создания отчета
+        window.createDebugReportAI = function() {
+            return createDebugReport('AI');
+        };
+        
+        // Функция для программного запуска автотеста
+        window.runAutotestAI = function() {
+            return runAutotest();
+        };
+        
+        // Делаем функции доступными глобально для ИИ
+        window.debugFunctions = {
+            activate: window.activateDebugMode,
+            createReport: window.createDebugReportAI,
+            runAutotest: window.runAutotestAI,
+            toggle: toggleDebugMode,
+            getStatus: () => ({ active: debugMode, timestamp: new Date().toISOString() })
+        };
+        
+        debugLog('🤖 Программные функции дебага зарегистрированы', 'success');
+    </script>
+    
+    <!-- Debug Panel (скрыта по умолчанию) -->
+    <div id="debug-panel" style="display: none; position: fixed; top: 10px; right: 10px; width: 400px; max-height: 80vh; background: rgba(0, 0, 0, 0.9); color: white; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 12px; z-index: 10000; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px;">
+            <h3 style="margin: 0; color: #4CAF50;">🔧 Debug Panel</h3>
+            <button onclick="toggleDebugPanel()" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">✕</button>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <button onclick="createDebugReport('USER')" style="background: #2196F3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px;">📋 Создать отчет</button>
+            <button onclick="runAutotest()" style="background: #FF9800; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px;">🧪 Автотест</button>
+            <button onclick="viewLogs()" style="background: #9C27B0; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">📄 Логи</button>
+        </div>
+        
+        <div id="debug-content">
+            <div style="color: #888;">Нажмите F12 для активации дебаг режима</div>
+        </div>
+    </div>
+    
+    <!-- Log Viewer Modal -->
+    <div id="log-viewer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10001;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 80%; background: #1e1e1e; border-radius: 8px; padding: 20px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="color: white; margin: 0;">📄 Просмотр логов</h3>
+                <button onclick="closeLogViewer()" style="background: #f44336; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Закрыть</button>
+            </div>
+            <div style="display: flex; margin-bottom: 15px;">
+                <select id="log-file-select" style="flex: 1; background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px;">
+                    <option value="">Выберите файл лога...</option>
+                </select>
+                <button onclick="refreshLogFiles()" style="background: #555; color: white; border: none; padding: 8px 15px; border-radius: 4px; margin-left: 10px; cursor: pointer;">🔄 Обновить</button>
+            </div>
+            <div id="log-content" style="flex: 1; background: #000; color: #00ff00; padding: 15px; border-radius: 4px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap;">
+                Выберите файл лога для просмотра...
+            </div>
+        </div>
+    </div>
+</body>
+</html>
