@@ -44,7 +44,7 @@
             margin-bottom: 25px;
             justify-content: center;
             align-items: center;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
         }
         button {
             padding: 15px 25px;
@@ -1081,6 +1081,17 @@
             const timestamp = new Date().toLocaleTimeString();
             const logEntry = `[${timestamp}] ${message}`;
             console.log(logEntry);
+            // Добавляем в панель отладки
+            const debugPanel = document.getElementById("debugPanel");
+            if (debugPanel && !debugPanel.classList.contains("hidden")) {
+                const logDiv = document.createElement("div");
+                logDiv.textContent = logEntry;
+                logDiv.style.padding = "2px 5px";
+                logDiv.style.fontSize = "12px";
+                logDiv.style.borderBottom = "1px solid #ccc";
+                debugPanel.appendChild(logDiv);
+                debugPanel.scrollTop = debugPanel.scrollHeight;
+            }
         }
 
         // Кастомные диалоги для выбора файлов с РАБОЧЕЙ файловой системой
@@ -1136,10 +1147,10 @@
                     let items;
                     
                     // Используем Tauri команды
-                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
+                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.core.invoke) {
                         debugLog('🔧 Используем Tauri API', 'info');
                         try {
-                            items = await window.__TAURI__.invoke('list_directory', { path });
+                            items = await window.__TAURI__.core.invoke('list_directory', { path });
                             debugLog(`📁 Получено ${items.length} элементов`, 'info');
                             debugLog('📁 Элементы: ' + JSON.stringify(items), 'info');
                         } catch (invokeError) {
@@ -1289,8 +1300,8 @@
                     // Ищем SVG файлы в выбранной папке
                     let svgFiles;
                     
-                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
-                        svgFiles = await window.__TAURI__.invoke('get_svg_files_in_directory', { path: this.selectedPath });
+                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.core.invoke) {
+                        svgFiles = await window.__TAURI__.core.invoke('get_svg_files_in_directory', { path: this.selectedPath });
                     } else {
                         debugLog('⚠️ Tauri API недоступен', 'error');
                         return;
@@ -1314,9 +1325,9 @@
                     let items;
                     
                     // Используем Tauri команды
-                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
+                    if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.core.invoke) {
                         debugLog('🔧 Используем Tauri API', 'info');
-                        items = await window.__TAURI__.invoke('list_directory', { path });
+                        items = await window.__TAURI__.core.invoke('list_directory', { path });
                         debugLog(`📁 Получено ${items.length} элементов`, 'info');
                     } else {
                         debugLog('⚠️ Tauri API недоступен', 'error');
@@ -1595,9 +1606,9 @@
                 if (window.__TAURI__ && window.__TAURI__.core) {
                     debugLog('Используем системный диалог window.__TAURI__.core.invoke', 'info');
                     files = await window.__TAURI__.core.invoke('select_files');
-                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
-                    debugLog('Используем системный диалог window.__TAURI__.invoke', 'info');
-                    files = await window.__TAURI__.invoke('select_files');
+                } else if (window.__TAURI__ && window.__TAURI__.core.invoke) {
+                    debugLog('Используем системный диалог window.__TAURI__.core.invoke', 'info');
+                    files = await window.__TAURI__.core.invoke('select_files');
                 } else {
                     throw new Error('Системные диалоги не доступны');
                 }
@@ -1628,9 +1639,9 @@
                 if (window.__TAURI__ && window.__TAURI__.core) {
                     debugLog('Используем системный диалог window.__TAURI__.core.invoke', 'info');
                     files = await window.__TAURI__.core.invoke('select_folder');
-                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
-                    debugLog('Используем системный диалог window.__TAURI__.invoke', 'info');
-                    files = await window.__TAURI__.invoke('select_folder');
+                } else if (window.__TAURI__ && window.__TAURI__.core.invoke) {
+                    debugLog('Используем системный диалог window.__TAURI__.core.invoke', 'info');
+                    files = await window.__TAURI__.core.invoke('select_folder');
                 } else {
                     throw new Error('Системные диалоги не доступны');
                 }
@@ -1678,9 +1689,9 @@
                 if (window.__TAURI__ && window.__TAURI__.core) {
                     debugLog('Используем window.__TAURI__.core.invoke для конвертации', 'info');
                     result = await window.__TAURI__.core.invoke('convert_svg_to_dxf', { files: selectedFiles });
-                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
-                    debugLog('Используем window.__TAURI__.invoke для конвертации', 'info');
-                    result = await window.__TAURI__.invoke('convert_svg_to_dxf', { files: selectedFiles });
+                } else if (window.__TAURI__ && window.__TAURI__.core.invoke) {
+                    debugLog('Используем window.__TAURI__.core.invoke для конвертации', 'info');
+                    result = await window.__TAURI__.core.invoke('convert_svg_to_dxf', { files: selectedFiles });
                 } else {
                     throw new Error('Tauri API не доступен');
                 }
