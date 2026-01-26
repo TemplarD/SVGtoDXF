@@ -20,7 +20,13 @@ pub fn run() {
         commands::toggle_debug_mode,
         commands::create_debug_report,
         commands::run_autotest,
-        commands::get_log_directory
+        commands::get_log_directory,
+        // Система логирования
+        commands::init_logging_system,
+        commands::write_log,
+        commands::get_log_files,
+        commands::read_log_file,
+        commands::cleanup_old_logs
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -30,6 +36,14 @@ pub fn run() {
             .build(),
         )?;
       }
+      
+      // Инициализируем систему логирования
+      tauri::async_runtime::spawn(async move {
+          if let Err(e) = commands::init_logging_system().await {
+              log::error!("Не удалось инициализировать систему логирования: {}", e);
+          }
+      });
+      
       Ok(())
     })
     .run(tauri::generate_context!())

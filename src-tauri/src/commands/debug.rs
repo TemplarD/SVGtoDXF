@@ -4,6 +4,7 @@ use std::fs;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use crate::commands::file_system::SystemInfo;
+use crate::commands::logging::{Logger, LogLevel, log_message};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AutotestResult {
@@ -389,4 +390,67 @@ async fn get_system_info() -> Result<SystemInfo, String> {
         arch,
         platform,
     })
+}
+
+/// Записывает сообщение в лог
+#[command]
+pub async fn write_log(level: String, category: String, message: String, details: Option<String>) -> Result<bool, String> {
+    let log_level = match level.as_str() {
+        "DEBUG" => LogLevel::Debug,
+        "INFO" => LogLevel::Info,
+        "WARN" => LogLevel::Warning,
+        "WARNING" => LogLevel::Warning,
+        "ERROR" => LogLevel::Error,
+        "CRITICAL" => LogLevel::Critical,
+        _ => LogLevel::Info,
+    };
+    
+    let log_dir = get_log_directory_path("USER")?;
+    let mut logger = Logger::new(&log_dir)?;
+    
+    logger.log(log_level, &category, &message, details.as_deref(), None)?;
+    
+    Ok(true)
+}
+
+/// Получает список лог файлов
+#[command]
+pub async fn get_log_files() -> Result<Vec<String>, String> {
+    let log_dir = get_log_directory_path("USER")?;
+    let logger = Logger::new(&log_dir)?;
+    logger.get_log_files()
+}
+
+/// Читает содержимое лог файла
+#[command]
+pub async fn read_log_file(filename: String) -> Result<String, String> {
+    let log_dir = get_log_directory_path("USER")?;
+    let logger = Logger::new(&log_dir)?;
+    logger.read_log_file(&filename)
+}
+
+/// Очищает старые логи
+#[command]
+pub async fn cleanup_old_logs(days_to_keep: u32) -> Result<usize, String> {
+    let log_dir = get_log_directory_path("USER")?;
+    let logger = Logger::new(&log_dir)?;
+    logger.cleanup_old_logs(days_to_keep)
+}
+
+/// Инициализирует систему логирования
+#[command]
+pub async fn init_logging_system() -> Result<bool, String> {
+    let log_dir = get_log_directory_path("USER")?;
+    crate::commands::logging::init_logger(&log_dir)?;
+    
+    // Записываем стартовое сообщение
+    log_message(
+        LogLevel::Info,
+        "SYSTEM",
+        "Система логирования инициализирована",
+        Some(&format!("Директория логов: {}", log_dir)),
+        None
+    )?;
+    
+    Ok(true)
 }
