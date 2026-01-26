@@ -244,7 +244,7 @@ async function testDialogs(results) {
     const startTime = Date.now();
     
     try {
-        // Проверка наличия функций для работы с диалогами
+        // Тест 3.1: Проверка наличия функций для работы с диалогами
         if (typeof window.selectFiles === 'function') {
             test.details.push('✅ Функция выбора файлов доступна');
         } else {
@@ -259,21 +259,99 @@ async function testDialogs(results) {
             test.details.push('❌ Функция выбора папки недоступна');
         }
         
-        // Проверка кастомных диалогов
-        const customDialog = document.getElementById('customFileDialog');
-        if (customDialog) {
+        // Тест 3.2: Проверка видимости кастомных диалогов
+        const fileDialog = document.getElementById('customFileDialog');
+        if (fileDialog) {
             test.details.push('✅ Кастомный диалог файлов найден');
+            
+            // Тест 3.3: Проверка элементов навигации диалога файлов
+            const fileBrowser = document.getElementById('fileBrowser');
+            if (fileBrowser) {
+                test.details.push('✅ Браузер файлов доступен');
+                
+                // Проверяем наличие кнопок навигации
+                const navButtons = fileBrowser.querySelectorAll('.nav-button');
+                if (navButtons.length > 0) {
+                    test.details.push(`✅ Найдено ${navButtons.length} кнопок навигации`);
+                    navButtons.forEach((btn, index) => {
+                        test.details.push(`   🎯 Кнопка ${index + 1}: ${btn.textContent}`);
+                    });
+                } else {
+                    test.passed = false;
+                    test.details.push('❌ Кнопки навигации не найдены');
+                }
+                
+                // Проверяем путь текущей директории
+                const currentPath = document.getElementById('fileCurrentPath');
+                if (currentPath) {
+                    test.details.push('✅ Отображение пути текущей директории доступно');
+                } else {
+                    test.passed = false;
+                    test.details.push('❌ Отображение пути не найдено');
+                }
+                
+            } else {
+                test.passed = false;
+                test.details.push('❌ Браузер файлов не найден');
+            }
+            
         } else {
             test.passed = false;
             test.details.push('❌ Кастомный диалог файлов не найден');
         }
         
-        const customFolderDialog = document.getElementById('customFolderDialog');
-        if (customFolderDialog) {
+        // Тест 3.4: Проверка диалога папок
+        const folderDialog = document.getElementById('customFolderDialog');
+        if (folderDialog) {
             test.details.push('✅ Кастомный диалог папок найден');
+            
+            // Тест 3.5: Проверка навигации диалога папок
+            const folderBrowser = document.getElementById('folderBrowser');
+            if (folderBrowser) {
+                test.details.push('✅ Браузер папок доступен');
+                
+                const folderPath = document.getElementById('folderCurrentPath');
+                if (folderPath) {
+                    test.details.push('✅ Отображение пути папки доступно');
+                } else {
+                    test.passed = false;
+                    test.details.push('❌ Отображение пути папки не найдено');
+                }
+            } else {
+                test.passed = false;
+                test.details.push('❌ Браузер папок не найден');
+            }
+            
         } else {
             test.passed = false;
             test.details.push('❌ Кастомный диалог папок не найден');
+        }
+        
+        // Тест 3.6: Проверка диалога справки
+        const helpDialog = document.getElementById('helpDialog');
+        if (helpDialog) {
+            test.details.push('✅ Диалог справки найден');
+        } else {
+            test.passed = false;
+            test.details.push('❌ Диалог справки не найден');
+        }
+        
+        // Тест 3.7: Проверка кнопок закрытия диалогов
+        const closeButtons = document.querySelectorAll('.dialog-close');
+        if (closeButtons.length > 0) {
+            test.details.push(`✅ Найдено ${closeButtons.length} кнопок закрытия диалогов`);
+        } else {
+            test.passed = false;
+            test.details.push('❌ Кнопки закрытия диалогов не найдены');
+        }
+        
+        // Тест 3.8: Проверка футеров диалогов
+        const footers = document.querySelectorAll('.dialog-footer');
+        if (footers.length > 0) {
+            test.details.push(`✅ Найдено ${footers.length} футеров диалогов`);
+        } else {
+            test.passed = false;
+            test.details.push('❌ Футеры диалогов не найдены');
         }
         
     } catch (error) {
@@ -362,20 +440,73 @@ async function testFileSystem(results) {
         if (window.__TAURI__ && window.__TAURI__.core) {
             test.details.push('✅ Tauri API доступен');
             
-            // Проверка базовых файловых функций
+            // Тест 5.1: Проверка доступности домашней директории
             try {
-                await window.__TAURI__.core.invoke('file_exists', { path: '/tmp' });
-                test.details.push('✅ Функция проверки файлов доступна');
-            } catch (error) {
-                test.details.push('ℹ️ Функция проверки файлов работает с ошибкой (нормально для некоторых путей)');
-            }
-            
-            try {
-                await window.__TAURI__.core.invoke('get_system_info');
-                test.details.push('✅ Функция системной информации доступна');
+                const homeDir = await window.__TAURI__.core.invoke('get_system_info');
+                test.details.push('✅ Системная информация доступна');
+                test.details.push(`✅ ОС: ${homeDir.os || 'неизвестно'}`);
+                test.details.push(`✅ Архитектура: ${homeDir.arch || 'неизвестно'}`);
             } catch (error) {
                 test.passed = false;
                 test.details.push(`❌ Ошибка системной информации: ${error.message}`);
+            }
+            
+            // Тест 5.2: Проверка доступности директорий
+            try {
+                await window.__TAURI__.core.invoke('file_exists', { path: '/tmp' });
+                test.details.push('✅ Проверка файлов работает');
+            } catch (error) {
+                test.details.push('ℹ️ Проверка файлов работает (ошибка для некоторых путей нормальна)');
+            }
+            
+            // Тест 5.3: Проверка родительской директории
+            try {
+                const parentDir = await window.__TAURI__.core.invoke('get_parent_directory', { path: '/tmp/test.txt' });
+                test.details.push('✅ Получение родительской директории работает');
+            } catch (error) {
+                test.passed = false;
+                test.details.push(`❌ Ошибка родительской директории: ${error.message}`);
+            }
+            
+            // Тест 5.4: Проверка системных корней
+            try {
+                const roots = await window.__TAURI__.core.invoke('get_system_roots');
+                if (roots && roots.length > 0) {
+                    test.details.push(`✅ Найдено ${roots.length} системных корней`);
+                    roots.forEach((root, index) => {
+                        test.details.push(`   📁 Корень ${index + 1}: ${root}`);
+                    });
+                } else {
+                    test.details.push('⚠️ Системные корни не найдены');
+                }
+            } catch (error) {
+                test.passed = false;
+                test.details.push(`❌ Ошибка системных корней: ${error.message}`);
+            }
+            
+            // Тест 5.5: Проверка доступности директории записи
+            try {
+                const writable = await window.__TAURI__.core.invoke('check_directory_writable', { path: '/tmp' });
+                test.details.push(`✅ Проверка записи в директорию работает: ${writable ? 'доступно' : 'недоступно'}`);
+            } catch (error) {
+                test.passed = false;
+                test.details.push(`❌ Ошибка проверки записи: ${error.message}`);
+            }
+            
+            // Тест 5.6: Проверка альтернативных путей сохранения
+            try {
+                const alternatives = await window.__TAURI__.core.invoke('find_alternative_save_directories', { originalPath: '/tmp/test' });
+                if (alternatives && alternatives.length > 0) {
+                    test.details.push(`✅ Найдено ${alternatives.length} альтернативных директорий`);
+                    alternatives.forEach((alt, index) => {
+                        test.details.push(`   📂 Альтернатива ${index + 1}: ${alt.name} - ${alt.reason}`);
+                    });
+                } else {
+                    test.details.push('⚠️ Альтернативные директории не найдены');
+                }
+            } catch (error) {
+                test.passed = false;
+                test.details.push(`❌ Ошибка альтернативных путей: ${error.message}`);
             }
             
         } else {
@@ -674,3 +805,65 @@ function generateSummary(results) {
 // Запуск автотеста
 console.log('🚀 Полный автотест готов к запуску. Выполните: runFullAutotest()');
 window.runFullAutotest = runFullAutotest;
+
+// Интеграция с F12 и программным вызовом
+window.runAutotestAI = async function() {
+    console.log('🤖 Запуск автотеста через ИИ API...');
+    
+    try {
+        // Проверяем доступность Tauri API
+        if (!window.__TAURI__ || !window.__TAURI__.core) {
+            console.error('❌ Tauri API недоступен для автотеста');
+            return { success: false, error: 'Tauri API недоступен' };
+        }
+        
+        // Записываем начало автотеста в лог
+        await window.__TAURI__.core.invoke('write_log', {
+            level: 'INFO',
+            message: '🤖 Запуск автотеста через ИИ API',
+            timestamp: new Date().toISOString()
+        });
+        
+        // Запускаем полный автотест
+        const results = await runFullAutotest();
+        
+        // Записываем результаты в лог
+        await window.__TAURI__.core.invoke('write_log', {
+            level: 'INFO',
+            message: `🤖 Автотест через ИИ завершен: ${results.summary.passed}/${results.summary.total} тестов пройдено (${results.summary.successRate}%)`,
+            timestamp: new Date().toISOString()
+        });
+        
+        console.log('✅ Автотест через ИИ завершен успешно');
+        return { success: true, results };
+        
+    } catch (error) {
+        console.error('❌ Ошибка автотеста через ИИ:', error);
+        
+        try {
+            await window.__TAURI__.core.invoke('write_log', {
+                level: 'ERROR',
+                message: `❌ Ошибка автотеста через ИИ: ${error.message}`,
+                timestamp: new Date().toISOString()
+            });
+        } catch (logError) {
+            console.error('❌ Ошибка записи в лог:', logError);
+        }
+        
+        return { success: false, error: error.message };
+    }
+};
+
+// Интеграция с F12
+document.addEventListener('keydown', function(event) {
+    // F12 + Ctrl для автотеста
+    if (event.key === 'F12' && event.ctrlKey) {
+        event.preventDefault();
+        console.log('🧪 Запуск автотеста через Ctrl+F12...');
+        runFullAutotest();
+    }
+});
+
+// Глобальные функции для доступа извне
+window.runAutotest = runFullAutotest;
+window.runAutotestAI = window.runAutotestAI;
