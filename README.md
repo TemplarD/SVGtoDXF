@@ -1,359 +1,201 @@
-# SVG to DXF Converter v1.0.0
+# SVG to DXF Converter
 
-Professional vector graphics conversion tool with advanced features.
+> 🚀 **Современный кроссплатформенный конвертер SVG в DXF с модульной архитектурой на Rust**
 
-## 🚀 Features
+[![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org)
+[![Tauri](https://img.shields.io/badge/Tauri-2.0-blue.svg)](https://tauri.app)
+[![Yew](https://img.shields.io/badge/Yew-0.21-green.svg)](https://yew.rs/)
 
-### Core Functionality
-- **SVG to DXF Conversion** - High-quality vector graphics conversion
-- **Batch Processing** - Convert multiple files simultaneously
-- **Real-time Progress** - Track conversion progress with animations
-- **Error Handling** - Comprehensive error reporting and recovery
+## 📋 Обзор
 
-### Advanced Features
-- **Debug Mode (F12)** - Advanced debugging and testing tools
-- **File System Management** - Intelligent file access and alternative paths
-- **Logging System** - Detailed operation logging with daily rotation
-- **Autotesting** - Comprehensive UI and functionality testing
+**SVG to DXF Converter** - профессиональное приложение для конвертации SVG файлов в DXF формат, разработанное с учетом лучших практик и современных технологий. Проект полностью соответствует техническому заданию и построен на модульной архитектуре.
 
-### User Experience
-- **Modern UI** - Beautiful animated interface with tooltips
-- **Drag & Drop** - Intuitive file handling
-- **Status Animations** - Visual feedback for all operations
-- **Responsive Design** - Works on different screen sizes
+### ✨ Ключевые особенности
 
-## 📦 Installation
+- 🏗️ **Модульная архитектура** - изолированные компоненты (core, ui, tauri_app, integration_tests)
+- 🎨 **Современный UI** - фронтенд на Yew с анимациями и Drag & Drop
+- 🔧 **Централизованное логирование** - система tracing с файловой ротацией
+- 🐛 **Дебаг-панель F12** - отладка и тестирование в реальном времени
+- 🧪 **Автотестирование** - полная система интеграционных тестов
+- 🌐 **Кроссплатформенность** - Windows, macOS, Linux
+- ⚡ **Высокая производительность** - нативная скорость Rust
 
-### Download Releases
-1. Go to [Releases](https://github.com/TemplarD/SVGtoDXF/releases)
-2. Download the appropriate version for your platform:
-   - Windows: `SVGtoDXF_1.0.0_x64-setup.exe`
-   - macOS: `SVGtoDXF_1.0.0_x64.dmg`
-   - Linux: `SVGtoDXF_1.0.0_amd64.AppImage`
+## 🏗️ Архитектура проекта
 
-### System Requirements
-- **Windows**: Windows 10 or later
-- **macOS**: macOS 10.15 or later
-- **Linux**: Ubuntu 20.04 or equivalent
+```
+svg2dxf/
+├── crates/
+│   ├── core/                    # 🔧 Ядро конвертации
+│   │   ├── lib.rs              # Публичный API
+│   │   ├── converter.rs        # Логика конвертации SVG→DXF
+│   │   └── error.rs            # Обработка ошибок
+│   ├── ui/                      # 🎨 Frontend на Yew
+│   │   ├── lib.rs              # Точка входа Yew
+│   │   ├── components/         # UI компоненты
+│   │   ├── state/              # Управление состоянием
+│   │   └── bindings.rs         # Связь с Tauri
+│   ├── tauri_app/               # ⚙️ Tauri интеграция
+│   │   ├── main.rs             # Запуск приложения
+│   │   ├── commands.rs         # Tauri команды
+│   │   ├── logging.rs          # Система логирования
+│   │   └── debug.rs            # Дебаг функциональность
+│   └── integration_tests/       # 🧪 Автотесты
+│       ├── lib.rs              # API тестов
+│       ├── test_runner.rs      # Запуск тестов
+│       └── tests/              # Наборы тестов
+├── Cargo.toml                  # Workspace конфигурация
+├── CHANGELOG.md                # Журнал разработки
+└── README.md                   # Этот файл
+```
 
-## 🎯 Usage
+## 🚀 Быстрый старт
 
-### Basic Conversion
-1. Launch the application
-2. Click "Выбрать файлы" or drag & drop SVG files
-3. Click "Конвертировать" to start conversion
-4. Find DXF files in the output directory
+### Требования
 
-### Advanced Features
-- **F12**: Activate debug mode for advanced options
-- **Batch Processing**: Select multiple files for conversion
-- **Custom Output**: Choose specific output directories
+- Rust 1.77.2+
+- Node.js 18+ (для фронтенд сборки)
+- Системные зависимости для Tauri
 
-## 🛠️ Development
+### Установка и запуск
 
-### Building from Source
 ```bash
-# Clone repository
+# Клонирование репозитория
 git clone https://github.com/TemplarD/SVGtoDXF.git
 cd SVGtoDXF
 
-# Install dependencies
-cd src-tauri
-cargo build
+# Установка зависимостей
+cargo install tauri-cli
+npm install -g trunk
 
-# Run development version
+# Запуск в режиме разработки
 cargo tauri dev
+
+# Сборка для продакшена
+cargo tauri build
 ```
 
-### Architecture
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Backend**: Rust with Tauri framework
-- **Graphics**: SVG parsing and DXF generation
-- **File System**: Cross-platform file management
+## 🎯 Основные возможности
 
-## 📊 Features Overview
+### Конвертация файлов
+- ✅ Поддержка основных SVG элементов: `path`, `rect`, `circle`, `line`
+- ✅ Массовая конвертация файлов
+- ✅ Drag & Drop интерфейс
+- ✅ Автоматическое сохранение рядом с исходными файлами
+- ✅ Обработка ошибок с детальными сообщениями
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| SVG Conversion | ✅ | High-quality vector conversion |
-| Batch Processing | ✅ | Multiple file conversion |
-| Debug Mode | ✅ | F12 debugging tools |
-| File Management | ✅ | Intelligent path handling |
-| Logging System | ✅ | Daily rotation logs |
-| Autotesting | ✅ | Comprehensive testing |
-| UI Animations | ✅ | Modern animated interface |
-| Error Recovery | ✅ | Automatic error handling |
+### Пользовательский интерфейс
+- 🎨 Современный дизайн с анимациями
+- 📱 Адаптивный интерфейс
+- 🔄 Прогресс конвертации в реальном времени
+- 📋 Список файлов со статусами
+- ❌ Встроенная справка
 
-## 🐛 Troubleshooting
+### Отладка и тестирование
+- 🐛 **F12** - дебаг панель с логами
+- 🧪 Автоматические тесты UI
+- 📊 Отчеты о системе
+- 🔍 Детальная диагностика
 
-### Common Issues
-- **Permission Denied**: Check file system permissions
-- **Conversion Failed**: Verify SVG file format
-- **Missing Output**: Check destination directory
+## 🛠️ Технологический стек
 
-### Debug Mode
-Press **F12** to access:
-- System information
-- File system diagnostics
-- Error logs
-- Performance metrics
+### Backend (Rust)
+- **usvg** - парсинг SVG
+- **dxf** - генерация DXF
+- **tracing** - логирование
+- **tokio** - асинхронность
+- **tauri 2.0** - фреймворк
 
-## 📄 License
+### Frontend (Yew)
+- **yew 0.21** - React-подобный фреймворк
+- **wasm-bindgen** - WebAssembly интеграция
+- **web-sys** - DOM API
+- **gloo** - утилиты для WASM
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Тестирование
+- **wasm-bindgen-test** - UI тесты
+- **Интеграционные тесты** - сквозное тестирование
+- **Модульные тесты** - unit тестирование
 
-## 🤝 Contributing
+## 📖 Использование
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+### Базовая конвертация
 
-## 📞 Support
+1. Запустите приложение
+2. Нажмите "Выбрать файлы" или перетащите SVG файлы
+3. Нажмите "Конвертировать"
+4. DXF файлы появятся рядом с исходными
 
-- **Issues**: [GitHub Issues](https://github.com/TemplarD/SVGtoDXF/issues)
-- **Documentation**: [Wiki](https://github.com/TemplarD/SVGtoDXF/wiki)
-- **Releases**: [GitHub Releases](https://github.com/TemplarD/SVGtoDXF/releases)
+### Горячие клавиши
 
-## 🎉 Changelog
+- **F12** - Переключить режим отладки
+- **Ctrl+O** - Выбрать файлы
+- **Ctrl+F** - Выбрать папку
+- **Ctrl+R** - Начать конвертацию
+- **Delete** - Очистить список
 
-### v1.0.0 (2026-01-26)
-- ✅ Complete SVG to DXF conversion engine
-- ✅ Advanced debug mode with F12 activation
-- ✅ Comprehensive file system management
-- ✅ Modern animated UI with tooltips
-- ✅ Batch processing capabilities
-- ✅ Intelligent error handling and recovery
-- ✅ Cross-platform compatibility
-- ✅ Professional logging system
-- ✅ Autotesting framework
+### Дебаг режим
+
+Нажмите **F12** для открытия панели отладки:
+- 📋 Просмотр логов в реальном времени
+- 🧪 Запуск автотестов
+- 📊 Создание отчетов
+- 🔍 Диагностика системы
+
+## 🧪 Тестирование
+
+### Запуск всех тестов
+
+```bash
+# Запуск UI тестов
+cargo test --package svg2dxf-integration-tests
+
+# Запуск core тестов  
+cargo test --package svg2dxf-core
+
+# Запуск всех тестов workspace
+cargo test --workspace
+```
+
+### Доступные тесты
+
+- `test_main_window_open` - проверка открытия UI
+- `test_select_files_button` - тест кнопки выбора
+- `test_f12_debug_toggle` - тест дебаг панели
+- `test_drag_drop_zone` - тест Drag & Drop
+- `test_conversion_progress` - тест прогресса конвертации
+
+## 📝 Разработка
+
+### Добавление новых функций
+
+1. **Core модуль** - логика конвертации в `crates/core/src/converter.rs`
+2. **UI компоненты** - новые компоненты в `crates/ui/src/components/`
+3. **Tauri команды** - API в `crates/tauri_app/src/commands.rs`
+4. **Тесты** - в `crates/integration_tests/src/tests/`
+
+### Сборка
+
+```bash
+# Разработка
+cargo tauri dev
+
+# Продакшен
+cargo tauri build
+
+# Для конкретных платформ
+cargo tauri build --target x86_64-pc-windows-msvc
+cargo tauri build --target x86_64-apple-darwin
+cargo tauri build --target x86_64-unknown-linux-gnu
+```
+
+## 📄 Лицензия
+
+MIT License - см. файл [LICENSE](LICENSE)
+
+## 🤝 Вклад
+
+Вклады приветствуются! Пожалуйста, создайте Issue для багов или Feature Request.
 
 ---
 
-**Made with ❤️ by TemplarD**
-
-## 🚀 Установка и запуск
-
-### 📦 Готовые сборки (рекомендуется)
-
-**Самый простой способ - использовать готовые сборки в папке `releases/`:**
-
-#### Windows
-- `releases/windows/svg-to-dxf-converter_0.1.0_x64-setup.exe` - установщик
-- `releases/windows/app.exe` - портативная версия
-
-#### Linux
-- `releases/linux/svg-to-dxf-converter_0.1.0_amd64.AppImage` - универсальный формат
-- `releases/linux/svg-to-dxf-converter_0.1.0_amd64.deb` - для Ubuntu/Debian
-- `releases/linux/svg-to-dxf-converter-0.1.0-1.x86_64.rpm` - для Fedora/CentOS
-
-Подробная инструкция по запуску есть в `releases/README.md`
-
-### 🔧 Сборка из исходников
-
-### Windows
-
-#### Требования
-- Windows 10/11
-- [Rust](https://rustup.rs/) 1.70+
-- [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) или Visual Studio 2019+
-
-#### Установка
-```powershell
-# 1. Установка Rust (если еще не установлен)
-winget install Rustlang.Rust.MSVC
-
-# 2. Клонирование репозитория
-git clone <repository-url>
-cd svgtodxf
-
-# 3. Сборка и запуск
-cd src-tauri
-cargo tauri dev
-```
-
-#### Создание EXE файла
-```powershell
-cd src-tauri
-cargo tauri build
-# EXE файл будет в src-tauri/target/release/bundle/msi/
-```
-
-### Ubuntu/Linux
-
-#### Требования
-- Ubuntu 20.04+ / Debian 11+
-- Rust 1.70+
-- Системные библиотеки для сборки
-
-#### Установка зависимостей
-```bash
-# Обновление системы
-sudo apt update && sudo apt upgrade -y
-
-# Установка Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-
-# Установка зависимостей для Tauri
-sudo apt install -y \
-    libwebkit2gtk-4.0-dev \
-    build-essential \
-    curl \
-    wget \
-    libssl-dev \
-    libgtk-3-dev \
-    libayatana-appindicator3-dev \
-    librsvg2-dev
-```
-
-#### Сборка и запуск
-```bash
-# Клонирование репозитория
-git clone <repository-url>
-cd svgtodxf
-
-# Сборка и запуск
-cd src-tauri
-cargo tauri dev
-```
-
-#### Создание DEB пакета
-```bash
-cd src-tauri
-cargo tauri build
-# DEB пакет будет в src-tauri/target/release/bundle/deb/
-```
-
-### macOS
-
-#### Требования
-- macOS 10.15+
-- [Rust](https://rustup.rs/) 1.70+
-- [Xcode Command Line Tools](https://developer.apple.com/xcode/)
-
-#### Установка
-```bash
-# Установка Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-
-# Клонирование и сборка
-git clone <repository-url>
-cd svgtodxf/src-tauri
-cargo tauri dev
-```
-
-## Использование
-
-1. **Выбор файлов**: Нажмите "Выбрать файлы" для выбора отдельных SVG файлов
-2. **Выбор папки**: Нажмите "Выбрать папку" для сканирования папки на наличие SVG файлов
-3. **Конвертация**: Нажмите "Конвертировать" для начала процесса
-4. **Мониторинг**: Следите за прогрессом в списке файлов
-
-## Поддерживаемые элементы SVG
-
-- ✅ Прямоугольники (`<rect>`)
-- ✅ Окружности (`<circle>`)
-- ✅ Линии (`<line>`)
-- 🔄 Пути (`<path>`) - базовая поддержка
-
-## Тестирование
-
-```bash
-# Запуск тестов
-cd src-tauri
-cargo test
-
-# Запуск с выводом
-cargo test -- --nocapture
-```
-
-## Структура проекта
-
-```
-svgtodxf/
-├── README.md           # Основная документация
-├── DOCS.md             # Техническая документация
-├── .gitignore          # Правила Git
-├── releases/           # 📦 Готовые сборки
-│   ├── README.md       # Инструкция по запуску
-│   ├── windows/        # Версии для Windows
-│   │   ├── app.exe
-│   │   └── svg-to-dxf-converter_0.1.0_x64-setup.exe
-│   └── linux/          # Версии для Linux
-│       ├── svg-to-dxf-converter_0.1.0_amd64.AppImage
-│       ├── svg-to-dxf-converter_0.1.0_amd64.deb
-│       └── svg-to-dxf-converter-0.1.0-1.x86_64.rpm
-├── src-tauri/          # Rust backend
-│   ├── src/
-│   │   ├── lib.rs      # Основная логика
-│   │   ├── main.rs     # Точка входа
-│   │   ├── commands/   # Tauri команды
-│   │   ├── types/      # Типы данных
-│   │   ├── utils/      # Утилиты
-│   │   └── tests/      # Тесты
-│   ├── Cargo.toml      # Зависимости Rust
-│   └── tauri.conf.json # Конфигурация Tauri
-├── dist/               # Frontend файлы
-├── index.html          # Основной HTML
-├── style.css           # Стили
-└── script.js           # JavaScript логика
-```
-
-## Разработка
-
-### Добавление новых элементов SVG
-
-1. Расширьте функцию `convert_svg_to_dxf_simple` в `src-tauri/src/utils/converter.rs`
-2. Добавьте парсинг новых элементов
-3. Создайте соответствующие DXF примитивы
-
-### Тестирование новых функций
-
-```rust
-#[test]
-fn test_new_feature() {
-    // Ваш тест
-}
-```
-
-## 🔧 Устранение проблем
-
-### Windows
-- **Ошибка сборки**: Установите Visual Studio Build Tools
-- **Ошибка запуска**: Проверьте наличие Visual C++ Redistributable
-
-### Linux
-- **Ошибка сборки**: Установите все зависимости из раздела выше
-- **Ошибка GTK**: `sudo apt install libwebkit2gtk-4.0-dev`
-
-### macOS
-- **Ошибка сборки**: Установите Xcode Command Line Tools
-- **Ошибка сертификата**: `xcode-select --install`
-
-## Лицензия
-
-MIT License
-
-## Вклад в проект
-
-1. Fork репозитория
-2. Создайте feature ветку
-3. Внесите изменения
-4. Отправьте Pull Request
-
-## Известные ограничения
-
-- Поддержка кривых Безье упрощена
-- Сложные трансформации SVG не поддерживаются
-- Градиенты и текст не конвертируются
-
-## Планы развития
-
-- [ ] Улучшенная поддержка путей SVG
-- [ ] Подработка текстовых элементов
-- [ ] Поддержка градиентов
-- [ ] Пакетная оптимизация
-- [ ] CLI интерфейс
+**Версия 2.0.0** - Полная реструктуризация по ТЗ с модульной архитектурой на Rust + Yew + Tauri 2.0

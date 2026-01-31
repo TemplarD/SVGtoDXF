@@ -1,0 +1,51 @@
+[package]
+name = "svg2dxf-integration-tests"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Core dependencies
+svg2dxf-core = { path = "../core" }
+
+# Testing framework
+wasm-bindgen-test = { workspace = true }
+wasm-bindgen = { workspace = true }
+web-sys = { workspace = true, features = [
+  "console",
+  "Document",
+  "Element",
+  "HtmlElement",
+  "Window",
+  "Event",
+  "MouseEvent",
+  "KeyboardEvent",
+  "HtmlButtonElement",
+  "HtmlInputElement",
+  "HtmlDivElement",
+  "HtmlDialogElement",
+  "NodeList",
+  "Node",
+  "DomTokenList",
+  "CssStyleDeclaration",
+] }
+js-sys = { workspace = true }
+gloo = { workspace = true }
+gloo-utils = "0.2"
+serde-wasm-bindgen = "0.6"
+
+# Utilities
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+console_error_panic_hook = { workspace = true }
+
+[dev-dependencies]
+wasm-bindgen-test = { workspace = true }

@@ -1,0 +1,53 @@
+[package]
+name = "svg2dxf-ui"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+yew = { workspace = true }
+wasm-bindgen = { workspace = true, features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+web-sys = { workspace = true, features = [
+  "console",
+  "Document",
+  "Element",
+  "HtmlElement",
+  "Window",
+  "Event",
+  "MouseEvent",
+  "KeyboardEvent",
+  "File",
+  "FileList",
+  "FileReader",
+  "DataTransfer",
+  "DragEvent",
+  "HtmlInputElement",
+  "HtmlButtonElement",
+  "HtmlDivElement",
+  "HtmlProgressElement",
+  "HtmlDialogElement",
+  "HtmlSelectElement",
+  "HtmlOptionElement",
+  "HtmlCollection",
+  "NodeList",
+  "Node",
+  "CssStyleDeclaration",
+  "DomTokenList",
+] }
+js-sys = { workspace = true }
+gloo = { workspace = true }
+gloo-timers = { version = "0.3", features = ["futures"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+wasm-bindgen-test = { workspace = true }
+gloo = { workspace = true }

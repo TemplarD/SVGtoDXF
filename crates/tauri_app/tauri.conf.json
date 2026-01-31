@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "SVG to DXF Converter",
+  "version": "1.0.0",
+  "identifier": "com.templard.svg2dxf",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "cd ui && trunk serve --port 1420",
+    "beforeBuildCommand": "cd ui && trunk build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "SVG to DXF Converter",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "dangerousDisableAssetCspModification": false,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/*", "$RESOURCE/*", "$APPCONFIG/*"]
+      }
+    }
+  },
+  "bundle": {
+    "active": false
+  },
+  "plugins": {
+    "log": {
+      "category": "svg2dxf",
+      "targets": ["log-dir"]
+    },
+    "fs": {
+      "requireLiteralLeadingDot": false
+    },
+    "shell": {
+      "open": true
+    }
+  }
+}

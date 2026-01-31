@@ -6,6 +6,8 @@ Cargo.lock
 # Tauri
 src-tauri/target/
 src-tauri/Cargo.lock
+crates/*/target/
+crates/*/Cargo.lock
 
 # IDE
 .vscode/
@@ -37,6 +39,8 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+crates/*/dist/
+crates/*/build/
 
 # Temporary files
 *.tmp
@@ -45,7 +49,12 @@ build/
 # Backup files
 *.bak
 *.backup
+*_backup/
 
 # Release binaries - исключаем из игнорирования папку releases
 !releases/
 !releases/README.md
+
+# WASM build artifacts
+*.wasm
+pkg/

@@ -1,0 +1,60 @@
+[workspace]
+members = [
+    "crates/core",
+    "crates/ui", 
+    "crates/tauri_app",
+    "crates/integration_tests"
+]
+exclude = [
+    "src-tauri"
+]
+resolver = "2"
+
+[workspace.package]
+version = "1.0.0"
+authors = ["TemplarD"]
+license = "MIT"
+repository = "https://github.com/TemplarD/SVGtoDXF"
+edition = "2021"
+rust-version = "1.77.2"
+description = "Professional SVG to DXF converter with modern UI"
+
+[workspace.dependencies]
+# Core dependencies
+usvg = "0.36"
+dxf = "0.5"
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging system
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+tracing-appender = "0.2"
+
+# Tauri dependencies
+tauri = { version = "2.9.5", features = [] }
+tauri-build = { version = "2.5.3", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-global-shortcut = "2"
+
+# Frontend (Yew)
+yew = { version = "0.21", features = ["csr"] }
+wasm-bindgen = "0.2"
+web-sys = "0.3"
+js-sys = "0.3"
+gloo = "0.11"
+console_error_panic_hook = "0.1"
+
+# File system and utilities
+dirs = "5.0"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "wasm-bindgen"] }
+
+# Testing
+wasm-bindgen-test = "0.3"
