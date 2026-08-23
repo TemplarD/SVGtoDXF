@@ -189,18 +189,17 @@ impl SvgConverter {
     }
 
     /// Конвертирует SVG Text в DXF MText.
-    /// usvg хранит текст в chunks (каждый со своей позицией x/y).
+    /// Обрабатывает текст по span'ам: учитывает размер шрифта (масштаб)
+    /// и семейство шрифта. Позиция берётся из чанка (с инверсией оси Y).
     fn convert_text(&self, text: &usvg::Text, drawing: &mut Drawing) -> ConversionResult<()> {
         for chunk in &text.chunks {
-            let content = chunk.text.trim();
-            if content.is_empty() {
+            if chunk.text.trim().is_empty() {
                 continue;
             }
             // Позиция чанка (SVG y вниз; инвертируем в DXF)
             let (x, y) = match (chunk.x, chunk.y) {
                 (Some(cx), Some(cy)) => (cx as f64, self.invert_y(cy as f64)),
                 _ => {
-                    // фолбэк: первая известная позиция символа
                     if let Some(pos) = text.positions.first() {
                         match (pos.x, pos.y) {
                             (Some(px), Some(py)) => (px as f64, self.invert_y(py as f64)),
@@ -212,14 +211,35 @@ impl SvgConverter {
                 }
             };
 
-            let mtext = MText {
-                insertion_point: Point::new(x, y, 0.0),
-                initial_text_height: 10.0,
-                text: content.to_string(),
-                ..Default::default()
-            };
-            drawing.add_entity(Entity::new(EntityType::MText(mtext)));
-            debug!("Добавлен текст: '{}' @ ({:.1}, {:.1})", content, x, y);
+            // Каждый span может иметь свой размер/шрифт -> отдельная MText-сущность
+            for span in &chunk.spans {
+                let slice = chunk.text.get(span.start..span.end).unwrap_or("");
+                let content = slice.trim();
+                if content.is_empty() {
+                    continue;
+                }
+                // Масштаб: размер шрифта SVG -> высота текста DXF
+                let font_size = span.font_size.get() as f64;
+                // Семейство шрифта (первое из списка; для DXF стиль регистрируется отдельно)
+                let font_family = span
+                    .font
+                    .families
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "default".to_string());
+
+                let mtext = MText {
+                    insertion_point: Point::new(x, y, 0.0),
+                    initial_text_height: font_size,
+                    text: content.to_string(),
+                    ..Default::default()
+                };
+                drawing.add_entity(Entity::new(EntityType::MText(mtext)));
+                debug!(
+                    "Текст: '{}' @ ({:.1}, {:.1}) размер={:.1} шрифт={}",
+                    content, x, y, font_size, font_family
+                );
+            }
         }
         Ok(())
     }
