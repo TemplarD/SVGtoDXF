@@ -108,8 +108,8 @@ impl SvgConverter {
             NodeKind::Text(ref text) => {
                 self.convert_text(text, drawing)?;
             }
-            NodeKind::Image(_) => {
-                warn!("Изображения не поддерживаются в DXF конвертации (отложено)");
+            NodeKind::Image(ref image) => {
+                crate::raster::trace_image(self, image, drawing)?;
             }
         }
         Ok(())
@@ -245,7 +245,7 @@ impl SvgConverter {
     }
 
     /// Инверсия оси Y: SVG (0 сверху) -> DXF (0 снизу)
-    fn invert_y(&self, y: f64) -> f64 {
+    pub(crate) fn invert_y(&self, y: f64) -> f64 {
         if self.doc_height > 0.0 {
             self.doc_height - y
         } else {

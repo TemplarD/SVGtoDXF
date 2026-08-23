@@ -5,6 +5,7 @@
 
 pub mod converter;
 pub mod error;
+pub mod raster;
 
 pub use converter::*;
 pub use error::*;

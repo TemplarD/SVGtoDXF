@@ -28,6 +28,9 @@ pub enum ConversionError {
     
     #[error("Ошибка обработки пути: {0}")]
     PathError(String),
+
+    #[error("Неподдерживаемый формат: {0}")]
+    UnsupportedFormat(String),
 }
 
 impl ConversionError {
@@ -69,6 +72,11 @@ impl ConversionError {
     /// Создает ошибку обработки пути
     pub fn path_error(msg: impl Into<String>) -> Self {
         Self::PathError(msg.into())
+    }
+
+    /// Создает ошибку неподдерживаемого формата
+    pub fn unsupported_format(msg: impl Into<String>) -> Self {
+        Self::UnsupportedFormat(msg.into())
     }
 }
 
