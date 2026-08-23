@@ -1,6 +1,6 @@
 //! API модуль для взаимодействия с UI (Tauri v2)
 
-use svg2dxf_core::{convert_svg_to_dxf, FileConversionResult};
+use svg2dxf_core::{convert_svg_to_dxf_with_options, ConversionOptions, FileConversionResult};
 use tauri::{Emitter, Window};
 use tauri_plugin_dialog::DialogExt;
 
@@ -44,6 +44,7 @@ pub async fn api_select_files(app: tauri::AppHandle) -> Result<Vec<String>, Stri
 pub async fn api_convert_files(
     files: Vec<String>,
     output_folder: String,
+    options: ConversionOptions,
     window: Window,
 ) -> Result<Vec<FileConversionResult>, String> {
     let mut results = Vec::new();
@@ -65,7 +66,7 @@ pub async fn api_convert_files(
             .to_string();
         let output_path = std::path::Path::new(&output_folder).join(format!("{}.dxf", stem));
 
-        match convert_svg_to_dxf(file_path, output_path.to_str().unwrap_or("")) {
+        match convert_svg_to_dxf_with_options(file_path, output_path.to_str().unwrap_or(""), options.clone()) {
             Ok(_) => {
                 let result = FileConversionResult {
                     success: true,

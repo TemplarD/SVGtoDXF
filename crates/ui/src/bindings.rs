@@ -73,6 +73,7 @@ pub async fn select_output_folder() -> Result<String, JsValue> {
 pub async fn convert_files(
     files: Vec<String>,
     output_folder: String,
+    options: crate::state::ConversionOptions,
 ) -> Result<Vec<JsValue>, JsValue> {
     let args = Object::new();
     let files_js = js_sys::Array::new();
@@ -85,6 +86,11 @@ pub async fn convert_files(
         &JsValue::from_str("outputFolder"),
         &JsValue::from_str(&output_folder),
     )?;
+    let options_js = js_sys::JSON::stringify(&JsValue::from_serde(&options).map_err(|e| {
+        JsValue::from_str(&format!("ошибка сериализации options: {}", e))
+    })?)
+    .map_err(|e| JsValue::from_str(&format!("ошибка JSON: {:?}", e)))?;
+    Reflect::set(&args, &JsValue::from_str("options"), &options_js)?;
 
     let result = invoke_tauri("api_convert_files", &args).await?;
     let array = result.dyn_into::<js_sys::Array>()?;

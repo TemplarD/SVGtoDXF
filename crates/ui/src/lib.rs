@@ -11,7 +11,7 @@ pub mod bindings;
 #[cfg(test)]
 mod tests;
 
-use state::{FileItem, FileStatus};
+use state::{FileItem, FileStatus, ConversionOptions};
 use bindings::{select_files, select_output_folder, convert_files, get_file_size};
 
 /// Форматирует размер файла: в КБ, если меньше 1 МБ, иначе в МБ.
@@ -33,6 +33,7 @@ pub fn App() -> Html {
     let output_folder = use_state(|| "".to_string());
     let debug_mode = use_state(|| false);
     let is_busy = use_state(|| false);
+    let options = use_state(ConversionOptions::default);
 
     // Слушаем события F12 для дебаг-режима
     let debug_mode_clone = debug_mode.clone();
@@ -115,9 +116,11 @@ pub fn App() -> Html {
         let status_message = status_message.clone();
         let output_folder = output_folder.clone();
         let is_busy = is_busy.clone();
+        let options = options.clone();
         Callback::from(move |_| {
             let current_files = (*files).clone();
             let current_output = (*output_folder).clone();
+            let current_options = (*options).clone();
             if current_files.is_empty() {
                 status_message.set("Сначала выберите файлы".to_string());
                 return;
@@ -134,7 +137,7 @@ pub fn App() -> Html {
             let is_busy_clone = is_busy.clone();
             spawn_local(async move {
                 let paths: Vec<String> = current_files.iter().map(|f| f.path.clone()).collect();
-                match convert_files(paths, current_output).await {
+                match convert_files(paths, current_output, current_options).await {
                     Ok(results) => {
                         let mut updated = (*files_clone).clone();
                         for (i, res) in results.iter().enumerate() {
@@ -169,6 +172,40 @@ pub fn App() -> Html {
         })
     };
 
+    // Переключатели настроек конвертации
+    let options_toggle = {
+        let options = options.clone();
+        move |key: &str, val: bool| {
+            let mut o = (*options).clone();
+            match key {
+                "fill_as_lines" => o.fill_as_lines = val,
+                "preserve_colors" => o.preserve_colors = val,
+                "true_color" => o.true_color = val,
+                "trace_raster" => o.trace_raster = val,
+                _ => {}
+            }
+            options.set(o);
+        }
+    };
+    let on_toggle = {
+        let t = options_toggle.clone();
+        move |key: &'static str| {
+            let t = t.clone();
+            Callback::from(move |e: web_sys::Event| {
+                let checked = e
+                    .target()
+                    .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+                    .map(|i| i.checked())
+                    .unwrap_or(false);
+                t(key, checked);
+            })
+        }
+    };
+    let on_toggle_fill = on_toggle("fill_as_lines");
+    let on_toggle_colors = on_toggle("preserve_colors");
+    let on_toggle_truecolor = on_toggle("true_color");
+    let on_toggle_raster = on_toggle("trace_raster");
+
     html! {
         <div class="app">
             <style>{ include_str!("style.css") }</style>
@@ -179,89 +216,67 @@ pub fn App() -> Html {
                 </div>
             }
 
-            <header>
-                <h1>{"SVG to DXF Converter"}</h1>
-                <p class="subtitle">{"Современный конвертер векторной графики"}</p>
+            <header class="app-header">
+                <div class="brand">
+                    <span class="brand-icon">{"⬡"}</span>
+                    <div>
+                        <h1>{"SVG → DXF"}</h1>
+                        <p class="subtitle">{"Конвертер векторной графики"}</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick={on_convert}
+                        disabled={(*files).is_empty() || (*output_folder).is_empty() || *is_busy}>
+                        <span>{"🔄"}</span>{"Конвертировать"}
+                    </button>
+                </div>
             </header>
 
             <main class="main-content">
-                <section class="section">
-                    <h2 class="section-title">
-                        <span class="icon">{"📁"}</span>
-                        {"Управление файлами"}
-                    </h2>
-
-                    <div class="controls">
-                        <button class="btn" onclick={on_open_file_dialog}>
-                            <span>{"📄"}</span>
-                            {"Выбрать SVG файлы"}
-                        </button>
-
-                        <button class="btn btn-secondary" onclick={on_folder_select}>
-                            <span>{"📁"}</span>
-                            {"Выбрать выходную папку"}
-                        </button>
-
-                        <button class="btn" onclick={on_convert}
-                            disabled={(*files).is_empty() || (*output_folder).is_empty() || *is_busy}>
-                            <span>{"🔄"}</span>
-                            {"Конвертировать в DXF"}
-                        </button>
-
-                        <button class="btn btn-secondary" onclick={on_clear} disabled={(*files).is_empty()}>
-                            <span>{"🗑️"}</span>
-                            {"Очистить"}
-                        </button>
+                <section class="card">
+                    <div class="card-head">
+                        <h2>{"📁 Файлы"}</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-ghost" onclick={on_open_file_dialog}>{"Выбрать SVG"}</button>
+                            <button class="btn btn-ghost" onclick={on_folder_select}>{"Папка вывода"}</button>
+                            <button class="btn btn-ghost danger" onclick={on_clear} disabled={(*files).is_empty()}>{"Очистить"}</button>
+                        </div>
                     </div>
 
-                    if !(*output_folder).is_empty() {
-                        <div class="status-message" style="margin-top: 15px;">
-                            {"Выходная папка: "}{(*output_folder).clone()}
-                        </div>
+                    if (*output_folder).is_empty() {
+                        <div class="hint">{"Выходная папка не выбрана — файлы не конвертируются"}</div>
+                    } else {
+                        <div class="hint ok">{"Папка вывода: "}{(*output_folder).clone()}</div>
                     }
-                </section>
-
-                <section class="section">
-                    <h2 class="section-title">
-                        <span class="icon">{"📋"}</span>
-                        {"Список файлов"}
-                    </h2>
 
                     <div class="file-list">
                         if (*files).is_empty() {
-                            <div class="empty-state">
-                                <div class="empty-state-icon">{"📁"}</div>
-                                <p>{"Нет выбранных файлов"}</p>
-                                <p>{"Нажмите 'Выбрать SVG файлы' для добавления"}</p>
+                            <div class="empty">
+                                <div class="empty-icon">{"📂"}</div>
+                                <p>{"Нет файлов. Нажмите «Выбрать SVG»."}</p>
                             </div>
                         } else {
                             {for (*files).iter().map(|file| {
                                 let status_class = match file.status {
-                                    FileStatus::Pending => "status-pending",
-                                    FileStatus::Processing => "status-processing",
-                                    FileStatus::Completed => "status-completed",
-                                    FileStatus::Error(_) => "status-error",
+                                    FileStatus::Pending => "pending",
+                                    FileStatus::Processing => "processing",
+                                    FileStatus::Completed => "completed",
+                                    FileStatus::Error(_) => "error",
                                 };
                                 let status_text = match &file.status {
                                     FileStatus::Pending => "Ожидание",
-                                    FileStatus::Processing => "Обработка...",
-                                    FileStatus::Completed => "Завершено",
-                                    FileStatus::Error(e) => {
-                                        if e.is_empty() { "Ошибка" } else { "Ошибка" }
-                                    }
+                                    FileStatus::Processing => "Обработка…",
+                                    FileStatus::Completed => "Готово",
+                                    FileStatus::Error(_) => "Ошибка",
                                 };
                                 html! {
-                                    <div class="file-item">
-                                        <div class="file-info">
-                                            <span>{"📄"}</span>
-                                            <div>
-                                                <div class="file-name">{&file.name}</div>
-                                                <div class="file-size">{format_size(file.size)}</div>
-                                            </div>
+                                    <div class="file-row">
+                                        <span class="file-ico">{"📄"}</span>
+                                        <div class="file-meta">
+                                            <div class="file-name">{&file.name}</div>
+                                            <div class="file-size">{format_size(file.size)}</div>
                                         </div>
-                                        <span class={format!("file-status {}", status_class)}>
-                                            {status_text}
-                                        </span>
+                                        <span class={format!("badge {}", status_class)}>{status_text}</span>
                                     </div>
                                 }
                             })}
@@ -269,14 +284,33 @@ pub fn App() -> Html {
                     </div>
                 </section>
 
-                <section class="section status-section">
-                    <h2 class="section-title">
-                        <span class="icon">{"ℹ️"}</span>
-                        {"Статус"}
-                    </h2>
-                    <div class="status-message">
-                        {(*status_message).clone()}
+                <section class="card">
+                    <div class="card-head">
+                        <h2>{"⚙️ Настройки"}</h2>
                     </div>
+                    <div class="options">
+                        <label class="opt" title="Рисовать заливку параллельными линиями внутри замкнутых фигур (вместо пустого контура).">
+                            <input type="checkbox" checked={(*options).fill_as_lines} onchange={on_toggle_fill}/>
+                            <span>{"Заливка линиями"}</span>
+                        </label>
+                        <label class="opt" title="Переносить цвета SVG (fill/stroke) в DXF. Выключите для чёрно-белого результата.">
+                            <input type="checkbox" checked={(*options).preserve_colors} onchange={on_toggle_colors}/>
+                            <span>{"Сохранять цвета"}</span>
+                        </label>
+                        <label class="opt" title="Точный цвет (true-color, группа 420). Новые программы (LibreCAD, AutoCAD 2004+) покажут точный оттенок; старые проигнорируют и возьмут приближённый ACI.">
+                            <input type="checkbox" checked={(*options).true_color} onchange={on_toggle_truecolor}/>
+                            <span>{"Точные цвета (true-color)"}</span>
+                        </label>
+                        <label class="opt" title="Трассировать встроенные растровые изображения (PNG/JPEG/GIF) в вектор через marching squares.">
+                            <input type="checkbox" checked={(*options).trace_raster} onchange={on_toggle_raster}/>
+                            <span>{"Трассировка растра"}</span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-head"><h2>{"ℹ️ Статус"}</h2></div>
+                    <div class="status-line">{(*status_message).clone()}</div>
                 </section>
             </main>
         </div>

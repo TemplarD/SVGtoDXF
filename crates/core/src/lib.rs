@@ -32,21 +32,30 @@ use std::path::Path;
 ///     Err(e) => println!("Ошибка: {}", e),
 /// }
 /// ```
-pub fn convert_svg_to_dxf(input_path: &str, output_path: &str) -> Result<()> {
+pub fn convert_svg_to_dxf_with_options(
+    input_path: &str,
+    output_path: &str,
+    options: ConversionOptions,
+) -> Result<()> {
     tracing::info!("Начало конвертации: {} -> {}", input_path, output_path);
-    
+
     let input_path = Path::new(input_path);
     let output_path = Path::new(output_path);
-    
-    // Проверяем существование входного файла
+
     if !input_path.exists() {
-        return Err(anyhow::anyhow!("Входной файл не существует: {}", input_path.display()));
+        return Err(anyhow::anyhow!(
+            "Входной файл не существует: {}",
+            input_path.display()
+        ));
     }
-    
-    // Создаем конвертер и выполняем конвертацию
-    let mut converter = SvgConverter::new();
+
+    let mut converter = SvgConverter::with_options(options);
     converter.convert_file(input_path, output_path)?;
-    
+
     tracing::info!("Конвертация завершена успешно: {}", output_path.display());
     Ok(())
+}
+
+pub fn convert_svg_to_dxf(input_path: &str, output_path: &str) -> Result<()> {
+    convert_svg_to_dxf_with_options(input_path, output_path, ConversionOptions::default())
 }

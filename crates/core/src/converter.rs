@@ -31,11 +31,43 @@ pub struct ConversionProgress {
     pub message: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ConversionOptions {
+    /// Сохранять цвета (fill/stroke) в DXF
+    pub preserve_colors: bool,
+    /// Точные цвета (true-color, группа 420) вместо приближённых ACI
+    pub true_color: bool,
+    /// Заливку рисовать параллельными линиями (вместо одного контура)
+    pub fill_as_lines: bool,
+    /// Шаг заливки линиями (в DXF-единицах)
+    pub fill_step: f64,
+    /// Трассировать растровые изображения
+    pub trace_raster: bool,
+    /// Порог яркости для трассировки растра (0..255)
+    pub raster_threshold: u8,
+}
+
+impl Default for ConversionOptions {
+    fn default() -> Self {
+        Self {
+            preserve_colors: true,
+            true_color: false,
+            fill_as_lines: false,
+            fill_step: 2.0,
+            trace_raster: true,
+            raster_threshold: 128,
+        }
+    }
+}
+
 /// Структура для конвертации SVG в DXF
 pub struct SvgConverter {
     svg_options: usvg::Options,
     current_layer: String,
     doc_height: f64,
+    options: ConversionOptions,
+    /// Точный RGB каждой добавленной сущности (для true-color 420)
+    entity_rgb: Vec<Option<(u8, u8, u8)>>,
 }
 
 impl SvgConverter {
@@ -44,7 +76,27 @@ impl SvgConverter {
             svg_options: usvg::Options::default(),
             current_layer: "0".to_string(),
             doc_height: 0.0,
+            options: ConversionOptions::default(),
+            entity_rgb: Vec::new(),
         }
+    }
+
+    pub fn with_options(options: ConversionOptions) -> Self {
+        let mut s = Self::new();
+        s.options = options;
+        s.entity_rgb = Vec::new();
+        s
+    }
+
+    /// Добавляет сущность и запоминает её точный RGB (для true-color 420).
+    fn add_entity_rgb(
+        &mut self,
+        drawing: &mut Drawing,
+        entity: Entity,
+        rgb: Option<(u8, u8, u8)>,
+    ) {
+        self.entity_rgb.push(rgb);
+        drawing.add_entity(entity);
     }
 
     pub fn set_layer(&mut self, layer: impl Into<String>) {
@@ -78,7 +130,52 @@ impl SvgConverter {
             ConversionError::dxf_write_error(format!("Не удалось сохранить DXF: {}", e))
         })?;
 
+        // True-color (группа 420) — дописываем рядом с 62 для новых программ.
+        // Не ломает старые: они читают 62 (ACI) и игнорируют 420.
+        if self.options.true_color {
+            if let Err(e) = self.apply_true_color(output_path) {
+                warn!("Не удалось дописать true-color: {}", e);
+            }
+        }
+
         debug!("DXF файл сохранен: {}", output_path.display());
+        Ok(())
+    }
+
+    /// Дописывает точный RGB (группа 420) рядом с каждой группой 62,
+    /// если точный цвет отличается от приближённого ACI.
+    fn apply_true_color(&self, output_path: &Path) -> ConversionResult<()> {
+        let content = fs::read_to_string(output_path)
+            .map_err(|e| ConversionError::dxf_write_error(format!("чтение DXF: {}", e)))?;
+        let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
+
+        // проходим по группам 62 в порядке их появления, сопоставляя entity_rgb
+        let mut rgb_idx = 0;
+        let mut i = 0;
+        while i < lines.len() {
+            if lines[i].trim() == "62" && i + 1 < lines.len() {
+                if let Some(Some((r, g, b))) = self.entity_rgb.get(rgb_idx) {
+                    let aci = rgb_to_aci(*r, *g, *b);
+                    let current = lines[i + 1].trim().parse::<u8>().unwrap_or(0);
+                    // дописываем 420 только если точный цвет отличается от ACI
+                    if aci as u8 != current {
+                        let true_val = (*r as i32) * 65536 + (*g as i32) * 256 + (*b as i32);
+                        // вставляем "420" и значение ПЕРЕД строкой "62"
+                        lines.insert(i, "420".to_string());
+                        lines.insert(i + 1, true_val.to_string());
+                        i += 2; // пропускаем вставленные
+                    }
+                }
+                rgb_idx += 1;
+            } else if lines[i].trim() == "0" {
+                // новая сущность — rgb_idx уже инкрементирован при 62 предыдущей
+            }
+            i += 1;
+        }
+
+        let out = lines.join("\r\n");
+        fs::write(output_path, out)
+            .map_err(|e| ConversionError::dxf_write_error(format!("запись DXF: {}", e)))?;
         Ok(())
     }
 
@@ -118,7 +215,7 @@ impl SvgConverter {
 
     /// Конвертирует SVG Path в LWPOLYLINE (с тесселяцией кривых).
     /// Координаты в path.data уже абсолютные (по документации usvg).
-    fn convert_path(&self, path: &usvg::Path, drawing: &mut Drawing) -> ConversionResult<()> {
+    fn convert_path(&mut self, path: &usvg::Path, drawing: &mut Drawing) -> ConversionResult<()> {
         const CURVE_STEPS: usize = 24;
 
         let mut points: Vec<(f64, f64)> = Vec::new();
@@ -186,17 +283,97 @@ impl SvgConverter {
         }
 
         let mut entity = Entity::new(EntityType::LwPolyline(poly));
-        if let Some((r, g, b)) = extract_rgb(path) {
-            entity.common.color = color_from_rgb(r, g, b);
+        let rgb = if self.options.preserve_colors {
+            if let Some((r, g, b)) = extract_rgb(path) {
+                entity.common.color = color_from_rgb(r, g, b);
+                Some((r, g, b))
+            } else { None }
+        } else { None };
+        self.add_entity_rgb(drawing, entity, rgb);
+
+        // Заливка параллельными линиями (если включено и есть замкнутый контур с заливкой)
+        if self.options.fill_as_lines && points.first() == points.last() {
+            if let Some((r, g, b)) = extract_fill_rgb(path) {
+                self.add_fill_lines(drawing, &points, r, g, b, self.options.fill_step);
+            }
         }
-        drawing.add_entity(entity);
         Ok(())
+    }
+
+    /// Рисует заливку области параллельными линиями (hatch-by-lines).
+    /// `points` — замкнутый контур (в координатах SVG, до инверсии Y).
+    fn add_fill_lines(
+        &mut self,
+        drawing: &mut Drawing,
+        points: &[(f64, f64)],
+        r: u8,
+        g: u8,
+        b: u8,
+        step: f64,
+    ) {
+        if points.len() < 3 || step <= 0.0 {
+            return;
+        }
+        // ограничивающий прямоугольник
+        let mut min_y = f64::MAX;
+        let mut max_y = f64::MIN;
+        for (_, y) in points {
+            min_y = min_y.min(*y);
+            max_y = max_y.max(*y);
+        }
+        let color = if self.options.preserve_colors {
+            Some(color_from_rgb(r, g, b))
+        } else {
+            None
+        };
+        // горизонтальные линии с шагом step
+        let mut y = min_y + step / 2.0;
+        while y < max_y {
+            let y_inv = self.invert_y(y);
+            // найдём пересечения линии y с рёбрами полигона
+            let mut xs: Vec<f64> = Vec::new();
+            for i in 0..points.len() {
+                let (x1, y1) = points[i];
+                let (x2, y2) = points[(i + 1) % points.len()];
+                if (y1 <= y && y2 > y) || (y2 <= y && y1 > y) {
+                    let x = x1 + (y - y1) / (y2 - y1) * (x2 - x1);
+                    xs.push(x);
+                }
+            }
+            xs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            // рисуем пары (чётные/нечётные пересечения = внутри полигона)
+            let mut k = 0;
+            while k + 1 < xs.len() {
+                let x_a = xs[k];
+                let x_b = xs[k + 1];
+                if (x_b - x_a).abs() > 1e-6 {
+                    let mut line = LwPolyline::default();
+                    line.vertices.push(LwPolylineVertex {
+                        x: x_a,
+                        y: y_inv,
+                        ..Default::default()
+                    });
+                    line.vertices.push(LwPolylineVertex {
+                        x: x_b,
+                        y: y_inv,
+                        ..Default::default()
+                    });
+                    let mut e = Entity::new(EntityType::LwPolyline(line));
+                    if let Some(ref c) = color {
+                        e.common.color = c.clone();
+                    }
+                    self.add_entity_rgb(drawing, e, Some((r, g, b)));
+                }
+                k += 2;
+            }
+            y += step;
+        }
     }
 
     /// Конвертирует SVG Text в DXF MText.
     /// Обрабатывает текст по span'ам: учитывает размер шрифта (масштаб)
     /// и семейство шрифта. Позиция берётся из чанка (с инверсией оси Y).
-    fn convert_text(&self, text: &usvg::Text, drawing: &mut Drawing) -> ConversionResult<()> {
+    fn convert_text(&mut self, text: &usvg::Text, drawing: &mut Drawing) -> ConversionResult<()> {
         for chunk in &text.chunks {
             if chunk.text.trim().is_empty() {
                 continue;
@@ -240,12 +417,15 @@ impl SvgConverter {
                     ..Default::default()
                 };
                 let mut entity = Entity::new(EntityType::MText(mtext));
-                if let Some(fill) = &span.fill {
-                    if let usvg::Paint::Color(c) = &fill.paint {
-                        entity.common.color = color_from_rgb(c.red, c.green, c.blue);
-                    }
-                }
-                drawing.add_entity(entity);
+                let rgb = if self.options.preserve_colors {
+                    if let Some(fill) = &span.fill {
+                        if let usvg::Paint::Color(c) = &fill.paint {
+                            entity.common.color = color_from_rgb(c.red, c.green, c.blue);
+                            Some((c.red, c.green, c.blue))
+                        } else { None }
+                    } else { None }
+                } else { None };
+                self.add_entity_rgb(drawing, entity, rgb);
                 debug!(
                     "Текст: '{}' @ ({:.1}, {:.1}) размер={:.1} шрифт={}",
                     content, x, y, font_size, font_family
@@ -349,6 +529,16 @@ fn extract_rgb(path: &usvg::Path) -> Option<(u8, u8, u8)> {
             return Some((c.red, c.green, c.blue));
         }
     }
+    if let Some(fill) = &path.fill {
+        if let usvg::Paint::Color(c) = &fill.paint {
+            return Some((c.red, c.green, c.blue));
+        }
+    }
+    None
+}
+
+/// Извлекает цвет заливки (fill) SVG-элемента (игнорируя обводку).
+fn extract_fill_rgb(path: &usvg::Path) -> Option<(u8, u8, u8)> {
     if let Some(fill) = &path.fill {
         if let usvg::Paint::Color(c) = &fill.paint {
             return Some((c.red, c.green, c.blue));

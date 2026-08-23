@@ -23,6 +23,7 @@ mod tests {
         let file_item = FileItem {
             id: "test".to_string(),
             name: "test.svg".to_string(),
+            path: "/tmp/test.svg".to_string(),
             size: 1024,
             status: crate::state::FileStatus::Pending,
         };
