@@ -203,8 +203,6 @@ pub fn App() -> Html {
     };
     let on_toggle_fill = on_toggle("fill_as_lines");
     let on_toggle_colors = on_toggle("preserve_colors");
-    let on_toggle_truecolor = on_toggle("true_color");
-    let on_toggle_raster = on_toggle("trace_raster");
 
     html! {
         <div class="app">
@@ -284,10 +282,7 @@ pub fn App() -> Html {
                     </div>
                 </section>
 
-                <section class="card">
-                    <div class="card-head">
-                        <h2>{"⚙️ Настройки"}</h2>
-                    </div>
+                <section class="card compact">
                     <div class="options">
                         <label class="opt" title="Рисовать заливку параллельными линиями внутри замкнутых фигур (вместо пустого контура).">
                             <input type="checkbox" checked={(*options).fill_as_lines} onchange={on_toggle_fill}/>
@@ -296,14 +291,6 @@ pub fn App() -> Html {
                         <label class="opt" title="Переносить цвета SVG (fill/stroke) в DXF. Выключите для чёрно-белого результата.">
                             <input type="checkbox" checked={(*options).preserve_colors} onchange={on_toggle_colors}/>
                             <span>{"Сохранять цвета"}</span>
-                        </label>
-                        <label class="opt" title="Точный цвет (true-color, группа 420). Новые программы (LibreCAD, AutoCAD 2004+) покажут точный оттенок; старые проигнорируют и возьмут приближённый ACI.">
-                            <input type="checkbox" checked={(*options).true_color} onchange={on_toggle_truecolor}/>
-                            <span>{"Точные цвета (true-color)"}</span>
-                        </label>
-                        <label class="opt" title="Трассировать встроенные растровые изображения (PNG/JPEG/GIF) в вектор через marching squares.">
-                            <input type="checkbox" checked={(*options).trace_raster} onchange={on_toggle_raster}/>
-                            <span>{"Трассировка растра"}</span>
                         </label>
                     </div>
                 </section>

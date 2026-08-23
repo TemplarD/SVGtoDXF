@@ -86,10 +86,8 @@ pub async fn convert_files(
         &JsValue::from_str("outputFolder"),
         &JsValue::from_str(&output_folder),
     )?;
-    let options_js = js_sys::JSON::stringify(&JsValue::from_serde(&options).map_err(|e| {
-        JsValue::from_str(&format!("ошибка сериализации options: {}", e))
-    })?)
-    .map_err(|e| JsValue::from_str(&format!("ошибка JSON: {:?}", e)))?;
+    let options_js = JsValue::from_serde(&options)
+        .map_err(|e| JsValue::from_str(&format!("ошибка сериализации options: {}", e)))?;
     Reflect::set(&args, &JsValue::from_str("options"), &options_js)?;
 
     let result = invoke_tauri("api_convert_files", &args).await?;

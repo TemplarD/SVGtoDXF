@@ -122,17 +122,18 @@ body {
 .empty { text-align: center; padding: 30px 10px; color: var(--muted); }
 .empty-icon { font-size: 2rem; margin-bottom: 8px; }
 
-/* Options */
-.options { display: grid; gap: 8px; }
+/* Compact settings row */
+.card.compact { padding: 10px 12px; }
+.options { display: flex; gap: 8px; flex-wrap: wrap; }
 .opt {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 10px;
   background: var(--bg-elev2);
   border: 1px solid var(--border);
-  border-radius: 9px;
-  font-size: .9rem; cursor: pointer;
+  border-radius: 8px;
+  font-size: .82rem; cursor: pointer;
 }
-.opt input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.opt input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
 
 .status-line { font-size: .9rem; color: var(--muted); padding: 4px 2px; }
 
