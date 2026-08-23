@@ -36,7 +36,18 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": true,
+    "targets": ["deb", "rpm", "appimage", "nsis", "app", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "shortDescription": "SVG to DXF Converter",
+    "longDescription": "Convert SVG files to DXF format. Supports geometry (paths, rect, circle, line, polygons), text (SVG text -> DXF MTEXT with font size and family), and raster images (PNG/JPEG/GIF traced to vector via marching squares)."
   },
   "plugins": {
     "log": {

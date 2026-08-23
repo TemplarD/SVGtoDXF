@@ -82,7 +82,7 @@ pub async fn convert_files(
     Reflect::set(&args, &JsValue::from_str("files"), &files_js)?;
     Reflect::set(
         &args,
-        &JsValue::from_str("output_folder"),
+        &JsValue::from_str("outputFolder"),
         &JsValue::from_str(&output_folder),
     )?;
 
@@ -93,6 +93,14 @@ pub async fn convert_files(
         out.push(array.get(i));
     }
     Ok(out)
+}
+
+/// Получить размер файла в байтах через Tauri-команду.
+pub async fn get_file_size(path: String) -> Result<u64, JsValue> {
+    let args = Object::new();
+    Reflect::set(&args, &JsValue::from_str("path"), &JsValue::from_str(&path))?;
+    let result = invoke_tauri("api_get_file_size", &args).await?;
+    result.as_f64().map(|v| v as u64).ok_or(JsValue::from_str("не удалось получить размер"))
 }
 
 /// Получить статус приложения.

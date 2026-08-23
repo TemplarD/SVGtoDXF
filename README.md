@@ -202,6 +202,53 @@ cargo tauri build --target x86_64-unknown-linux-gnu
 
 > Полный список зависимостей для конкретной ОС — см. официальную документацию Tauri 2: https://tauri.app/start/prerequisites/
 
+## 📦 Готовые сборки
+
+После `cargo tauri build` (или кросс-сборки) готовые билды лежат в `target/`:
+
+### Linux (собрано на x86_64, проверено на Ubuntu 24.04)
+| Формат | Путь | Установка |
+|--------|------|-----------|
+| **.deb** | `target/release/bundle/deb/SVG to DXF Converter_1.0.0_amd64.deb` | `sudo apt install ./target/release/bundle/deb/"SVG to DXF Converter_1.0.0_amd64.deb"` |
+| **.rpm** | `target/release/bundle/rpm/SVG to DXF Converter-1.0.0-1.x86_64.rpm` | `sudo dnf install ./target/release/bundle/rpm/SVG\ to\ DXF\ Converter-1.0.0-1.x86_64.rpm` |
+| **AppImage** | `target/release/bundle/appimage/SVG to DXF Converter_1.0.0_amd64.AppImage` | `chmod +x` и запуск |
+
+Удаление старой версии (если ставили через .deb):
+```bash
+sudo apt remove svg-to-dxf-converter
+```
+
+### Windows (кросс-сборка из Linux через MinGW, `x86_64-pc-windows-gnu`)
+| Формат | Путь |
+|--------|------|
+| **Установщик NSIS** | `target/x86_64-pc-windows-gnu/release/bundle/nsis/SVG to DXF Converter_1.0.0_x64-setup.exe` |
+| Голый .exe | `target/x86_64-pc-windows-gnu/release/svg2dxf-tauri-app.exe` |
+
+> Подпись отсутствует (её нельзя сделать вне Windows-хоста) — при запуске Windows может показать предупреждение SmartScreen. Это нормально, «Подробнее → Всё равно запустить».
+
+### macOS
+**Не собирается на Linux** (нет Xcode SDK). Собирать только на реальном Mac:
+```bash
+cargo tauri build --target x86_64-apple-darwin   # Intel
+cargo tauri build --target aarch64-apple-darwin  # Apple Silicon
+```
+Результат: `.app` и `.dmg` в `target/<target>/release/bundle/`.
+
+### GitHub Releases
+Билды можно выложить в релизы репозитория: создайте Release на
+https://github.com/TemplarD/SVGtoDXF/releases и загрузите файлы из таблиц выше.
+Тогда пользователи смогут скачать их по прямым ссылкам без сборки из исходников.
+
+## 🔍 Чем открывать результат (DXF / SVG / 3D)
+
+Лёгкий набор для просмотра (Ubuntu/Debian):
+```bash
+sudo apt install -y librecad gwenview
+```
+- **LibreCAD** — просмотр и редактирование **DXF** (частично DWG), нативный CAD-просмотрщик.
+- **Gwenview** — просмотрщик **SVG**, растровой графики и превью 3D-форматов (KDE, очень лёгкий).
+- Для полноценного 3D: `sudo apt install -y meshlab` (меш) или `freecad` (тяжёлый CAD).
+
 ## 📄 Лицензия
 
 MIT License - см. файл [LICENSE](LICENSE)

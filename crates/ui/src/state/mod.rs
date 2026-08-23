@@ -16,6 +16,7 @@ pub enum FileStatus {
 pub struct FileItem {
     pub id: String,
     pub name: String,
+    pub path: String,
     pub size: u64,
     pub status: FileStatus,
 }

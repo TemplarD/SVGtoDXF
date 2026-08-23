@@ -111,7 +111,8 @@ pub fn run() {
             api::api_select_output_folder,
             api::api_select_files,
             api::api_convert_files,
-            api::api_get_status
+            api::api_get_status,
+            api::api_get_file_size
         ])
         .setup(|_app| {
             println!("🚀 SVG to DXF Converter запущен");

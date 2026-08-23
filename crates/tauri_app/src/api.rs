@@ -105,3 +105,10 @@ pub async fn api_convert_files(
 pub async fn api_get_status() -> Result<String, String> {
     Ok("Готов к работе".to_string())
 }
+
+/// API endpoint для получения размера файла в байтах.
+#[tauri::command]
+pub async fn api_get_file_size(path: String) -> Result<u64, String> {
+    let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+    Ok(meta.len())
+}

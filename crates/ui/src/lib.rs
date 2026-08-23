@@ -12,7 +12,18 @@ pub mod bindings;
 mod tests;
 
 use state::{FileItem, FileStatus};
-use bindings::{select_files, select_output_folder, convert_files};
+use bindings::{select_files, select_output_folder, convert_files, get_file_size};
+
+/// Форматирует размер файла: в КБ, если меньше 1 МБ, иначе в МБ.
+fn format_size(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * 1024;
+    if bytes < MB {
+        format!("{:.1} КБ", bytes as f64 / KB as f64)
+    } else {
+        format!("{:.2} МБ", bytes as f64 / MB as f64)
+    }
+}
 
 /// Главный компонент приложения
 #[function_component]
@@ -59,10 +70,13 @@ pub fn App() -> Html {
                                 .and_then(|n| n.to_str())
                                 .unwrap_or("unknown")
                                 .to_string();
+                            // реальный размер файла через Tauri-команду
+                            let size = get_file_size(p.clone()).await.unwrap_or(0);
                             new_files.push(FileItem {
                                 id: format!("file_{}", i),
                                 name,
-                                size: 0,
+                                path: p.clone(),
+                                size,
                                 status: FileStatus::Pending,
                             });
                         }
@@ -119,7 +133,7 @@ pub fn App() -> Html {
             let status_clone = status_message.clone();
             let is_busy_clone = is_busy.clone();
             spawn_local(async move {
-                let paths: Vec<String> = current_files.iter().map(|f| f.name.clone()).collect();
+                let paths: Vec<String> = current_files.iter().map(|f| f.path.clone()).collect();
                 match convert_files(paths, current_output).await {
                     Ok(results) => {
                         let mut updated = (*files_clone).clone();
@@ -242,7 +256,7 @@ pub fn App() -> Html {
                                             <span>{"📄"}</span>
                                             <div>
                                                 <div class="file-name">{&file.name}</div>
-                                                <div class="file-size">{format!("{} байт", file.size)}</div>
+                                                <div class="file-size">{format_size(file.size)}</div>
                                             </div>
                                         </div>
                                         <span class={format!("file-status {}", status_class)}>
