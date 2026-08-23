@@ -1,10 +1,11 @@
 //! Основной модуль конвертации SVG в DXF
 
 use crate::error::{ConversionError, ConversionResult};
-use dxf::{Drawing};
+use dxf::Drawing;
 use dxf::enums::AcadVersion;
-use dxf::entities::{Entity, EntityType, LwPolyline};
+use dxf::entities::{Entity, EntityType, LwPolyline, MText};
 use dxf::LwPolylineVertex;
+use dxf::Point;
 use std::path::Path;
 use std::fs;
 use usvg::{NodeKind, Tree, TreeParsing};
@@ -104,11 +105,11 @@ impl SvgConverter {
                     self.convert_node(&child, drawing)?;
                 }
             }
-            NodeKind::Image(_) => {
-                warn!("Изображения не поддерживаются в DXF конвертации");
+            NodeKind::Text(ref text) => {
+                self.convert_text(text, drawing)?;
             }
-            NodeKind::Text(_) => {
-                warn!("Текстовые элементы не поддерживаются, будут пропущены");
+            NodeKind::Image(_) => {
+                warn!("Изображения не поддерживаются в DXF конвертации (отложено)");
             }
         }
         Ok(())
@@ -184,6 +185,42 @@ impl SvgConverter {
         }
 
         drawing.add_entity(Entity::new(EntityType::LwPolyline(poly)));
+        Ok(())
+    }
+
+    /// Конвертирует SVG Text в DXF MText.
+    /// usvg хранит текст в chunks (каждый со своей позицией x/y).
+    fn convert_text(&self, text: &usvg::Text, drawing: &mut Drawing) -> ConversionResult<()> {
+        for chunk in &text.chunks {
+            let content = chunk.text.trim();
+            if content.is_empty() {
+                continue;
+            }
+            // Позиция чанка (SVG y вниз; инвертируем в DXF)
+            let (x, y) = match (chunk.x, chunk.y) {
+                (Some(cx), Some(cy)) => (cx as f64, self.invert_y(cy as f64)),
+                _ => {
+                    // фолбэк: первая известная позиция символа
+                    if let Some(pos) = text.positions.first() {
+                        match (pos.x, pos.y) {
+                            (Some(px), Some(py)) => (px as f64, self.invert_y(py as f64)),
+                            _ => continue,
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+            };
+
+            let mtext = MText {
+                insertion_point: Point::new(x, y, 0.0),
+                initial_text_height: 10.0,
+                text: content.to_string(),
+                ..Default::default()
+            };
+            drawing.add_entity(Entity::new(EntityType::MText(mtext)));
+            debug!("Добавлен текст: '{}' @ ({:.1}, {:.1})", content, x, y);
+        }
         Ok(())
     }
 

@@ -77,7 +77,9 @@ cargo tauri build
 ## 🎯 Основные возможности
 
 ### Конвертация файлов
-- ✅ Поддержка основных SVG элементов: `path`, `rect`, `circle`, `line`
+- ✅ Поддержка основных SVG элементов: `path`, `rect`, `circle`, `line`, `polygon`, `polyline`
+- ✅ **Текст** (`text`) конвертируется в DXF `MTEXT` с сохранением позиции
+- ⏸️ **Растровые изображения** (`image`) — **пока не поддерживаются** (отложено; кидают предупреждение, не ломая конвертацию). План: трассировка растра в вектор или встраивание как OLE-объект.
 - ✅ Массовая конвертация файлов
 - ✅ Drag & Drop интерфейс
 - ✅ Автоматическое сохранение рядом с исходными файлами
@@ -170,7 +172,7 @@ cargo test --workspace
 
 1. **Core модуль** - логика конвертации в `crates/core/src/converter.rs`
 2. **UI компоненты** - новые компоненты в `crates/ui/src/components/`
-3. **Tauri команды** - API в `crates/tauri_app/src/commands.rs`
+3. **Tauri команды** - API в `crates/tauri_app/src/api.rs`
 4. **Тесты** - в `crates/integration_tests/src/tests/`
 
 ### Сборка
@@ -187,6 +189,18 @@ cargo tauri build --target x86_64-pc-windows-msvc
 cargo tauri build --target x86_64-apple-darwin
 cargo tauri build --target x86_64-unknown-linux-gnu
 ```
+
+### 🌐 Кроссплатформенность (Windows / Linux / macOS)
+
+Проект собирается под все три основные ОС через Tauri 2.0 (нативный webview, не Electron).
+
+| ОС | Команда сборки | Системные зависимости |
+|----|----------------|----------------------|
+| **Linux** (x86_64) | `cargo tauri build` | `libwebkit2gtk-4.1-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, ` librsvg2-dev`, пакетный менеджер (на Ubuntu: `sudo apt install ...`) |
+| **Windows** (x86_64) | `cargo tauri build --target x86_64-pc-windows-msvc` | Инструменты сборки MSVC (Visual Studio Build Tools), WebView2 (идёт в Windows 11 по умолчанию) |
+| **macOS** (Intel/Apple Silicon) | `cargo tauri build --target x86_64-apple-darwin` (или `aarch64-apple-darwin`) | Xcode Command Line Tools (`xcode-select --install`) |
+
+> Полный список зависимостей для конкретной ОС — см. официальную документацию Tauri 2: https://tauri.app/start/prerequisites/
 
 ## 📄 Лицензия
 
