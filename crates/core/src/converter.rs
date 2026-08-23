@@ -6,6 +6,7 @@ use dxf::enums::AcadVersion;
 use dxf::entities::{Entity, EntityType, LwPolyline, MText};
 use dxf::LwPolylineVertex;
 use dxf::Point;
+use dxf::Color;
 use std::path::Path;
 use std::fs;
 use usvg::{NodeKind, Tree, TreeParsing};
@@ -181,10 +182,14 @@ impl SvgConverter {
             });
         }
         if !pen_down && points.first() == points.last() {
-            poly.flags |= 1; // бит Closed для LWPOLYLINE
+            poly.flags |= 1; // бит Closed для LWPOL LWPOLYLINE
         }
 
-        drawing.add_entity(Entity::new(EntityType::LwPolyline(poly)));
+        let mut entity = Entity::new(EntityType::LwPolyline(poly));
+        if let Some((r, g, b)) = extract_rgb(path) {
+            entity.common.color = color_from_rgb(r, g, b);
+        }
+        drawing.add_entity(entity);
         Ok(())
     }
 
@@ -234,7 +239,13 @@ impl SvgConverter {
                     text: content.to_string(),
                     ..Default::default()
                 };
-                drawing.add_entity(Entity::new(EntityType::MText(mtext)));
+                let mut entity = Entity::new(EntityType::MText(mtext));
+                if let Some(fill) = &span.fill {
+                    if let usvg::Paint::Color(c) = &fill.paint {
+                        entity.common.color = color_from_rgb(c.red, c.green, c.blue);
+                    }
+                }
+                drawing.add_entity(entity);
                 debug!(
                     "Текст: '{}' @ ({:.1}, {:.1}) размер={:.1} шрифт={}",
                     content, x, y, font_size, font_family
@@ -279,6 +290,76 @@ fn quadratic_bezier(
     let x = u * u * p0x + 2.0 * u * t * p1x + t * t * p2x;
     let y = u * u * p0y + 2.0 * u * t * p1y + t * t * p2y;
     (x, y)
+}
+
+/// Стандартная палитра AutoCAD (ACI 1..255) — усечённая таблица
+/// индекс -> (R, G, B). Используется для приближения цвета SVG к
+/// ближайшему индексу цвета DXF (dxf 0.5 не поддерживает true-color напрямую).
+const ACI_PALETTE: &[(u8, u8, u8, u8)] = &[
+    (1, 255, 0, 0),       // red
+    (2, 255, 255, 0),     // yellow
+    (3, 0, 255, 0),       // green
+    (4, 0, 255, 255),     // cyan
+    (5, 0, 0, 255),       // blue
+    (6, 255, 0, 255),     // magenta
+    (7, 255, 255, 255),   // white
+    (8, 128, 128, 128),   // dark gray (approx)
+    (9, 192, 192, 192),   // light gray
+    (10, 255, 128, 128),  // light red
+    (11, 255, 214, 128),  // orange-ish
+    (12, 255, 255, 128),  // light yellow
+    (13, 128, 255, 128),  // light green
+    (14, 128, 255, 255),  // light cyan
+    (15, 128, 128, 255),  // light blue
+    (16, 255, 128, 255),  // light magenta
+    (20, 204, 0, 0),      // dark red
+    (30, 0, 204, 0),      // dark green
+    (40, 0, 0, 204),      // dark blue
+    (50, 204, 204, 0),    // olive
+    (60, 204, 0, 204),    // purple
+    (70, 0, 204, 204),    // teal
+    (110, 128, 64, 0),    // brown
+    (140, 64, 0, 0),      // maroon
+    (200, 255, 255, 255), // near white
+    (250, 0, 0, 0),       // black
+];
+
+/// Возвращает ближайший индекс цвета ACI (1..255) к заданному RGB.
+fn rgb_to_aci(r: u8, g: u8, b: u8) -> u8 {
+    let mut best = 7u8; // white fallback
+    let mut best_dist = u32::MAX;
+    for &(idx, cr, cg, cb) in ACI_PALETTE {
+        let dr = r as i32 - cr as i32;
+        let dg = g as i32 - cg as i32;
+        let db = b as i32 - cb as i32;
+        let dist = (dr * dr + dg * dg + db * db) as u32;
+        if dist < best_dist {
+            best_dist = dist;
+            best = idx;
+        }
+    }
+    best
+}
+
+/// Извлекает цвет (RGB) из заливки или обводки SVG-элемента.
+/// Приоритет: stroke (обводка), затем fill (заливка).
+fn extract_rgb(path: &usvg::Path) -> Option<(u8, u8, u8)> {
+    if let Some(stroke) = &path.stroke {
+        if let usvg::Paint::Color(c) = &stroke.paint {
+            return Some((c.red, c.green, c.blue));
+        }
+    }
+    if let Some(fill) = &path.fill {
+        if let usvg::Paint::Color(c) = &fill.paint {
+            return Some((c.red, c.green, c.blue));
+        }
+    }
+    None
+}
+
+/// Формирует dxf::Color из RGB SVG (ближайший ACI).
+fn color_from_rgb(r: u8, g: u8, b: u8) -> Color {
+    Color::from_index(rgb_to_aci(r, g, b))
 }
 
 impl Default for SvgConverter {
