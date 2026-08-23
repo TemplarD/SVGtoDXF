@@ -10,6 +10,7 @@
     "beforeBuildCommand": "cd ui && trunk build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "SVG to DXF Converter",

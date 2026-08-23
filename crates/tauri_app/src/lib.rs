@@ -1,8 +1,7 @@
 //! SVG to DXF Tauri App Module
 
 use svg2dxf_core::SvgConverter;
-use tauri::{State, Emitter};
-use tauri_plugin_global_shortcut::GlobalShortcutExt;
+use tauri::State;
 
 mod api;
 

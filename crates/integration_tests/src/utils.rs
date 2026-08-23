@@ -26,7 +26,7 @@ pub fn simulate_click(element_id: &str) -> Result<(), JsValue> {
 }
 
 /// Симулирует нажатие клавиши
-pub fn simulate_keydown(key: &str) -> Result<(), JsValue> {
+pub fn simulate_keydown(_key: &str) -> Result<(), JsValue> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     
