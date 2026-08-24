@@ -137,6 +137,30 @@ body {
 
 .status-line { font-size: .9rem; color: var(--muted); padding: 4px 2px; }
 
+/* ===== Прогресс-бар конвертации ===== */
+.progress-wrap { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elev2);
+  overflow: hidden;
+}
+.progress-bar::-webkit-progress-bar { background: var(--bg-elev2); border-radius: 999px; }
+.progress-bar::-webkit-progress-value {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+  transition: width .2s ease;
+}
+.progress-bar::-moz-progress-bar {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+}
+.progress-text { font-size: .8rem; color: var(--muted); white-space: nowrap; min-width: 110px; text-align: right; }
+
 /* ===== Группы настроек (Качество / Имя файла) ===== */
 .settings-group {
   background: var(--bg-elev2);

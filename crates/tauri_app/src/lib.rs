@@ -117,7 +117,9 @@ pub fn run() {
             api::api_select_files,
             api::api_convert_files,
             api::api_get_status,
-            api::api_get_file_size
+            api::api_get_file_size,
+            api::api_save_folders,
+            api::api_load_folders
         ])
         .setup(|app| {
             // Имя/версию пробрасываем в лог через tracing (stdout только в дебаге).

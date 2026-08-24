@@ -111,6 +111,51 @@ pub async fn get_status() -> Result<String, JsValue> {
     Ok(result.as_string().unwrap_or_default())
 }
 
+/// Загрузить сохранённые между запусками папки.
+/// Возвращает JsValue вида { output_folder, last_input_dir } (возможно пустые).
+pub async fn load_folders() -> Result<JsValue, JsValue> {
+    invoke_tauri("api_load_folders", &JsValue::NULL).await
+}
+
+/// Сохранить последние папки между запусками.
+pub async fn save_folders(output_folder: String, last_input_dir: String) -> Result<(), JsValue> {
+    let args = Object::new();
+    let obj = Object::new();
+    Reflect::set(
+        &obj,
+        &JsValue::from_str("output_folder"),
+        &JsValue::from_str(&output_folder),
+    )?;
+    Reflect::set(
+        &obj,
+        &JsValue::from_str("last_input_dir"),
+        &JsValue::from_str(&last_input_dir),
+    )?;
+    Reflect::set(&args, &JsValue::from_str("folders"), &obj)?;
+    invoke_tauri("api_save_folders", &args).await?;
+    Ok(())
+}
+
+/// Подписаться на событие от backend (например, "conversion_progress").
+/// Возвращает id подписки; колбэк вызывается с распарсенным объектом события.
+pub async fn listen_event(event: &str, callback: js_sys::Function) -> Result<JsValue, JsValue> {
+    let window = web_sys::window().ok_or(JsValue::from_str("no window"))?;
+    if let Ok(tauri) = Reflect::get(&window, &JsValue::from_str("__TAURI__")) {
+        if let Ok(event_mod) = Reflect::get(&tauri, &JsValue::from_str("event")) {
+            if let Ok(listen) = Reflect::get(&event_mod, &JsValue::from_str("listen")) {
+                if let Ok(listen_fn) = listen.dyn_into::<Function>() {
+                    let event_js = JsValue::from_str(event);
+                    // listen(event, handler) -> Promise<unlisten>
+                    let promise = listen_fn.call2(&JsValue::NULL, &event_js, &callback)?;
+                    let promise = promise.dyn_into::<js_sys::Promise>()?;
+                    return JsFuture::from(promise).await;
+                }
+            }
+        }
+    }
+    Err(JsValue::from_str("Tauri runtime недоступен"))
+}
+
 /// Извлечь поле success из объекта FileConversionResult.
 pub fn result_success(obj: &JsValue) -> bool {
     Reflect::get(obj, &JsValue::from_str("success"))

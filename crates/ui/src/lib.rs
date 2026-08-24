@@ -11,7 +11,10 @@ pub mod state;
 #[cfg(test)]
 mod tests;
 
-use bindings::{convert_files, get_file_size, select_files, select_output_folder};
+use bindings::{
+    convert_files, get_file_size, listen_event, load_folders, save_folders, select_files,
+    select_output_folder,
+};
 use state::{ConversionOptions, FileItem, FileStatus};
 
 /// Форматирует размер файла: в КБ, если меньше 1 МБ, иначе в МБ.
@@ -33,17 +36,96 @@ pub fn App() -> Html {
     let output_folder = use_state(|| "".to_string());
     let is_busy = use_state(|| false);
     let options = use_state(ConversionOptions::default);
+    // Последняя папка, откуда выбирали SVG (для сохранения между запусками).
+    let last_input_dir = use_state(|| "".to_string());
+    // Прогресс конвертации: (current, total, percent). None — не активна.
+    let progress = use_state(|| None::<(usize, usize, f32)>);
+
+    // При монтировании: загрузить сохранённую папку вывода и подписаться
+    // на события прогресса от backend.
+    {
+        let output_folder = output_folder.clone();
+        let last_input_dir = last_input_dir.clone();
+        let progress = progress.clone();
+        use_effect(move || {
+            let output_folder = output_folder.clone();
+            let last_input_dir = last_input_dir.clone();
+            spawn_local(async move {
+                if let Ok(folders) = load_folders().await {
+                    let out = js_sys::Reflect::get(&folders, &JsValue::from_str("output_folder"))
+                        .ok()
+                        .and_then(|v| v.as_string())
+                        .unwrap_or_default();
+                    if !out.is_empty() {
+                        output_folder.set(out);
+                    }
+                    let inp = js_sys::Reflect::get(&folders, &JsValue::from_str("last_input_dir"))
+                        .ok()
+                        .and_then(|v| v.as_string())
+                        .unwrap_or_default();
+                    if !inp.is_empty() {
+                        last_input_dir.set(inp);
+                    }
+                }
+            });
+
+            // Подписка на conversion_progress. Колбэк — JS-функция, т.к.
+            // напрямую Rust-closure в listen_event не передать просто.
+            let progress_cb = {
+                let progress = progress.clone();
+                Closure::wrap(Box::new(move |e: JsValue| {
+                    // e.payload содержит {current,total,percent,file}
+                    if let Ok(payload) = js_sys::Reflect::get(&e, &JsValue::from_str("payload")) {
+                        let current = js_sys::Reflect::get(&payload, &JsValue::from_str("current"))
+                            .ok()
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0) as usize;
+                        let total = js_sys::Reflect::get(&payload, &JsValue::from_str("total"))
+                            .ok()
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0) as usize;
+                        let percent = js_sys::Reflect::get(&payload, &JsValue::from_str("percent"))
+                            .ok()
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0) as f32;
+                        progress.set(Some((current, total, percent)));
+                    }
+                }) as Box<dyn FnMut(JsValue)>)
+            };
+            let cb_fn = progress_cb
+                .as_ref()
+                .unchecked_ref::<js_sys::Function>()
+                .clone();
+            spawn_local(async move {
+                let _ = listen_event("conversion_progress", cb_fn).await;
+            });
+            // держим Closure живым, чтобы колбэк не был собран GC
+            progress_cb.forget();
+            || {}
+        });
+    }
 
     // Выбор SVG файлов
     let on_open_file_dialog = {
         let files = files.clone();
         let status_message = status_message.clone();
+        let last_input_dir = last_input_dir.clone();
         Callback::from(move |_| {
             let files_clone = files.clone();
             let status_clone = status_message.clone();
+            let last_input_dir_clone = last_input_dir.clone();
             spawn_local(async move {
                 match select_files().await {
                     Ok(paths) if !paths.is_empty() => {
+                        // Запоминаем папку выбора для сохранения между запусками
+                        if let Some(first) = paths.first() {
+                            if let Some(parent) = Path::new(first).parent() {
+                                if let Some(p) = parent.to_str() {
+                                    last_input_dir_clone.set(p.to_string());
+                                    let _ = save_folders("".to_string(), p.to_string()).await;
+                                }
+                            }
+                        }
                         let mut new_files = (*files_clone).clone();
                         for (i, p) in paths.iter().enumerate() {
                             let name = Path::new(p)
@@ -75,14 +157,18 @@ pub fn App() -> Html {
     let on_folder_select = {
         let output_folder = output_folder.clone();
         let status_message = status_message.clone();
+        let last_input_dir = last_input_dir.clone();
         Callback::from(move |_| {
             let output_folder_clone = output_folder.clone();
             let status_clone = status_message.clone();
+            let last_input_dir_clone = last_input_dir.clone();
             spawn_local(async move {
                 match select_output_folder().await {
                     Ok(folder) => {
                         output_folder_clone.set(folder.clone());
                         status_clone.set("Выходная папка выбрана".to_string());
+                        // Сохраняем между запусками (выход + последний ввод)
+                        let _ = save_folders(folder, (*last_input_dir_clone).clone()).await;
                     }
                     Err(e) => status_clone.set(format!("Ошибка выбора папки: {:?}", e)),
                 }
@@ -97,6 +183,7 @@ pub fn App() -> Html {
         let output_folder = output_folder.clone();
         let is_busy = is_busy.clone();
         let options = options.clone();
+        let progress = progress.clone();
         Callback::from(move |_| {
             let current_files = (*files).clone();
             let current_output = (*output_folder).clone();
@@ -111,10 +198,12 @@ pub fn App() -> Html {
             }
             status_message.set("Начинаю конвертацию...".to_string());
             is_busy.set(true);
+            progress.set(Some((0, current_files.len(), 0.0)));
 
             let files_clone = files.clone();
             let status_clone = status_message.clone();
             let is_busy_clone = is_busy.clone();
+            let progress_clone = progress.clone();
             spawn_local(async move {
                 let paths: Vec<String> = current_files.iter().map(|f| f.path.clone()).collect();
                 match convert_files(paths, current_output, current_options).await {
@@ -139,6 +228,10 @@ pub fn App() -> Html {
                     }
                 }
                 is_busy_clone.set(false);
+                // оставляем прогресс на 100% на мгновение, затем скрываем
+                progress_clone.set(Some((current_files.len(), current_files.len(), 100.0)));
+                gloo_timers::future::TimeoutFuture::new(800).await;
+                progress_clone.set(None);
             });
         })
     };
@@ -336,6 +429,14 @@ pub fn App() -> Html {
                 <section class="card">
                     <div class="card-head"><h2>{"ℹ️ Статус"}</h2></div>
                     <div class="status-line">{(*status_message).clone()}</div>
+                    if let Some((current, total, percent)) = *progress {
+                        <div class="progress-wrap">
+                            <progress class="progress-bar" value={percent.to_string()} max={"100"}></progress>
+                            <div class="progress-text">
+                                {format!("{} / {}  ({:.0}%)", current, total, percent)}
+                            </div>
+                        </div>
+                    }
                 </section>
             </main>
         </div>

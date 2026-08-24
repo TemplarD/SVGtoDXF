@@ -1,8 +1,9 @@
 //! API модуль для взаимодействия с UI (Tauri v2)
 
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use svg2dxf_core::{convert_svg_to_dxf_with_options, ConversionOptions, FileConversionResult};
-use tauri::{Emitter, Window};
+use tauri::{Emitter, Manager, Window};
 use tauri_plugin_dialog::DialogExt;
 
 /// API endpoint для выбора выходной папки через системный диалог
@@ -53,10 +54,27 @@ pub async fn api_convert_files(
     // Создаем выходную папку если не существует
     std::fs::create_dir_all(&output_folder).map_err(|e| e.to_string())?;
 
+    let total = files.len();
     for (i, file_path) in files.iter().enumerate() {
+        let current = i + 1;
+        let percent = if total > 0 {
+            (current as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+        // Прогресс по файлам (0..100) для полосы в UI.
+        let _ = window.emit(
+            "conversion_progress",
+            serde_json::json!({
+                "current": current,
+                "total": total,
+                "percent": percent,
+                "file": file_path,
+            }),
+        );
         let _ = window.emit(
             "conversion_status",
-            format!("Обработка файла {}: {}", i + 1, file_path),
+            format!("Обработка файла {} из {}: {}", current, total, file_path),
         );
 
         let input_path = std::path::Path::new(file_path);
@@ -207,5 +225,56 @@ fn resolve_output_path(dir: &Path, base_name: &str, overwrite: bool) -> PathBuf 
             // защита от бесконечного цикла в экзотических случаях
             return candidate;
         }
+    }
+}
+
+/// Сохранённые между запусками папки (выходная + последний выбор SVG).
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct SavedFolders {
+    /// Последняя выбранная папка вывода.
+    pub output_folder: String,
+    /// Последняя папка, откуда выбирали SVG (для удобства диалога).
+    pub last_input_dir: String,
+}
+
+/// Имя файла настроек в директории конфигурации приложения.
+const FOLDERS_FILE: &str = "folders.json";
+
+/// Возвращает путь к файлу folders.json в директории конфигурации приложения.
+fn folders_file_path(app: &tauri::AppHandle) -> Option<PathBuf> {
+    // Конфиг приложения: Linux $XDG_CONFIG_HOME/com.templard.svg2dxf,
+    // Windows %APPDATA%\com.templard.svg2dxf, macOS ~/Library/Application Support/...
+    app.path()
+        .app_config_dir()
+        .ok()
+        .map(|dir: PathBuf| dir.join(FOLDERS_FILE))
+}
+
+/// Сохраняет последние выбранные папки между запусками.
+#[tauri::command]
+pub async fn api_save_folders(app: tauri::AppHandle, folders: SavedFolders) -> Result<(), String> {
+    let path = folders_file_path(&app)
+        .ok_or_else(|| "Не удалось получить директорию конфигурации".to_string())?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(&folders).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    tracing::info!("Сохранены папки: {:?}", path);
+    Ok(())
+}
+
+/// Загружает сохранённые папки (пусто, если ещё не сохранялись).
+#[tauri::command]
+pub async fn api_load_folders(app: tauri::AppHandle) -> Result<SavedFolders, String> {
+    let path = folders_file_path(&app)
+        .ok_or_else(|| "Не удалось получить директорию конфигурации".to_string())?;
+    match std::fs::read_to_string(&path) {
+        Ok(content) => {
+            let folders: SavedFolders =
+                serde_json::from_str(&content).map_err(|e| e.to_string())?;
+            Ok(folders)
+        }
+        Err(_) => Ok(SavedFolders::default()),
     }
 }
