@@ -145,4 +145,15 @@ MIT — см. [LICENSE](LICENSE).
 
 ---
 
+## 🗺️ План развития (future)
+
+1. **Входные растры (PNG/JPEG/GIF как отдельный файл)** — сейчас поддерживаются только **вложенные** `<image href>` внутри SVG. Планируется:
+   - расширить file‑filter в `crates/tauri_app/src/api.rs` (`.add_filter("Изображения", &["png","jpg","jpeg","gif"])`)
+   - в `crates/core/src/converter.rs::convert_file` добавить ветку: если содержимое **не является SVG** (по сигнатуре), десериализовать его через `image crate` → передать в `raster::trace_image` напрямую (без usvg‑парсера)
+2. **Гладкая трассировка** — сейчас marching squares даёт пиксельные LWPOLYLINE. Варианты улучшения:
+   - `potrace` через C FFI (идеальные Bezier‑кривые, но тяжело собрать)
+   - post‑processing: группировать соседние LWPOLYLINE → `dxf Path` с сплайнами (dxf 0.5 поддерживает Path)
+3. **Android (Web / PWA)** — отдельная папка `web/` (JS+WASM) → PWA/TWA без адресной строки. Android SDK на диске — Windows‑бинды, из Linux нужен либо TWA‑обёртка, либо нативный APK (cargo‑apk / rust‑android‑gradle)
+4. **Подпись Windows‑инсталлятора** — на Linux можно self‑signed через `osslsigncode` (SmartScreen всё равно ругнется), либо реальный сертификат на Windows‑хосте
+
 **v2.0.0** — полная реструктуризация: модульная архитектура (core/ui/tauri_app), Yew + Tauri 2.0, true‑color + заливка линиями, трассировка растров.
