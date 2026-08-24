@@ -53,6 +53,12 @@ crates/*/build/
 !releases/
 !releases/README.md
 
+# Портативная Windows-сборка (zip) — тоже коммитим в репо как готовый билд.
+# build/ целиком игнорируется выше, поэтому надо пошагово раз-игнорировать:
+!build/
+!build/portable/
+!build/portable/SVGtoDXF-Portable-x64.zip
+
 # WASM build artifacts
 *.wasm
 pkg/
