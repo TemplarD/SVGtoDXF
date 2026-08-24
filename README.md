@@ -5,6 +5,7 @@
 [![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-blue.svg)](https://tauri.app)
 [![Yew](https://img.shields.io/badge/Yew-0.21-green.svg)](https://yew.rs/)
+[![GitHub Release](https://img.shields.io/github/v/release/TemplarD/SVGtoDXF?include_prereleases&style=flat&label=Release&color=success)](https://github.com/TemplarD/SVGtoDXF/releases/latest)
 
 ## 📋 Обзор
 
