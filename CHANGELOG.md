@@ -1,5 +1,24 @@
 # Журнал разработки SVG to DXF Converter
 
+## 🐾 2026-08-25 (3) - ПОРТАТИВНАЯ ВЕРСИЯ ДЛЯ WINDOWS (без установки)
+
+### ✅ Выполнено:
+1. ✅ **Портативная сборка** — скрипты `build/portable-windows.sh` (Linux) и
+   `build/portable-windows.ps1` (Windows) собирают zip `SVGtoDXF-Portable-x64.zip`
+   с `svg2dxf-tauri-app.exe` + `WebView2Loader.dll`. Пользователь распаковывает
+   и запускает `.exe` — ничего не устанавливается, можно на флешку.
+2. ✅ **Portable-режим сохранения папок** — `folders.json` теперь сохраняется
+   **рядом с exe** (если папка доступна для записи), иначе в конфиг приложения.
+   Это делает портативную версию полностью переносимой: настройки едут с ней.
+3. ✅ Скрипт `build/portable-windows.sh` реально собирает и упаковывает бандл
+   (проверено: zip создаётся, внутри валидный .exe + dll).
+
+### 📦 Артефакты:
+- `target/x86_64-pc-windows-gnu/release/bundle/nsis/SVG to DXF Converter_1.0.0_x64-setup.exe` (инсталлятор)
+- `build/portable/SVGtoDXF-Portable-x64.zip` (портативная версия)
+
+---
+
 ## 🐾 2026-08-25 (2) - СОХРАНЕНИЕ ПАПОК + ПРОГРЕСС-БАР + WINDOWS-СБОРКА
 
 ### ✅ Выполнено:

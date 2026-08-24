@@ -240,10 +240,25 @@ pub struct SavedFolders {
 /// Имя файла настроек в директории конфигурации приложения.
 const FOLDERS_FILE: &str = "folders.json";
 
-/// Возвращает путь к файлу folders.json в директории конфигурации приложения.
+/// Возвращает путь к файлу folders.json.
+/// Для переносимости пробуем сохранить рядом с исполняемым файлом
+/// (portable-режим: папка меняется вместе с .exe, например на флешке).
+/// Если рядом писать нельзя — используем директорию конфигурации приложения.
 fn folders_file_path(app: &tauri::AppHandle) -> Option<PathBuf> {
-    // Конфиг приложения: Linux $XDG_CONFIG_HOME/com.templard.svg2dxf,
-    // Windows %APPDATA%\com.templard.svg2dxf, macOS ~/Library/Application Support/...
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let portable = dir.join(FOLDERS_FILE);
+            // Проверяем, можно ли писать в эту папку (рядом с exe).
+            if std::fs::write(&portable, b"").is_ok() {
+                // Убираем пустой файл-пробу, вернём путь.
+                let _ = std::fs::remove_file(&portable);
+                return Some(portable);
+            }
+        }
+    }
+    // Запасной путь: конфиг приложения
+    // (Linux $XDG_CONFIG_HOME/com.templard.svg2dxf,
+    //  Windows %APPDATA%\com.templard.svg2dxf, macOS ~/Library/Application Support/...)
     app.path()
         .app_config_dir()
         .ok()
