@@ -11,7 +11,7 @@ mod tests {
             passed: true,
             message: "Success".to_string(),
         };
-        
+
         assert_eq!(result.name, "Test");
         assert!(result.passed);
         assert_eq!(result.message, "Success");
@@ -24,7 +24,7 @@ mod tests {
             passed: true,
             message: "Success".to_string(),
         };
-        
+
         // Проверяем что структура может быть сериализована
         let json = serde_json::to_string(&result).unwrap();
         let _deserialized: TestResult = serde_json::from_str(&json).unwrap();
@@ -44,7 +44,7 @@ mod tests {
                 message: "Error 2".to_string(),
             },
         ];
-        
+
         assert_eq!(results.len(), 2);
         assert!(results[0].passed);
         assert!(!results[1].passed);

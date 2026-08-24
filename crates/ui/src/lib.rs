@@ -1,18 +1,18 @@
-use yew::prelude::*;
-use web_sys::console;
-use wasm_bindgen_futures::spawn_local;
-use wasm_bindgen::prelude::*;
 use std::path::Path;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::console;
+use yew::prelude::*;
 
-pub mod state;
-pub mod components;
 pub mod bindings;
+pub mod components;
+pub mod state;
 
 #[cfg(test)]
 mod tests;
 
-use state::{FileItem, FileStatus, ConversionOptions};
-use bindings::{select_files, select_output_folder, convert_files, get_file_size};
+use bindings::{convert_files, get_file_size, select_files, select_output_folder};
+use state::{ConversionOptions, FileItem, FileStatus};
 
 /// Форматирует размер файла: в КБ, если меньше 1 МБ, иначе в МБ.
 fn format_size(bytes: u64) -> String {
@@ -162,6 +162,9 @@ pub fn App() -> Html {
                 "preserve_colors" => o.preserve_colors = val,
                 "true_color" => o.true_color = val,
                 "trace_raster" => o.trace_raster = val,
+                "overwrite" => o.overwrite = val,
+                "add_color_suffix" => o.add_color_suffix = val,
+                "add_hatch_suffix" => o.add_hatch_suffix = val,
                 _ => {}
             }
             options.set(o);
@@ -183,6 +186,23 @@ pub fn App() -> Html {
     };
     let on_toggle_fill = on_toggle("fill_as_lines");
     let on_toggle_colors = on_toggle("preserve_colors");
+    let on_toggle_true_color = on_toggle("true_color");
+    let on_toggle_trace = on_toggle("trace_raster");
+    let on_toggle_overwrite = on_toggle("overwrite");
+    let on_toggle_color_suffix = on_toggle("add_color_suffix");
+    let on_toggle_hatch_suffix = on_toggle("add_hatch_suffix");
+
+    // Что ещё нужно сделать, чтобы стала доступна конвертация
+    let files_empty = (*files).is_empty();
+    let folder_empty = (*output_folder).is_empty();
+    let needs_action = files_empty || folder_empty;
+    let action_hint: &str = if files_empty && folder_empty {
+        "Сначала выберите SVG и папку вывода"
+    } else if files_empty {
+        "Выберите SVG файлы для конвертации"
+    } else {
+        "Выберите папку вывода"
+    };
 
     html! {
         <div class="app">
@@ -197,10 +217,22 @@ pub fn App() -> Html {
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick={on_convert}
-                        disabled={(*files).is_empty() || (*output_folder).is_empty() || *is_busy}>
-                        <span>{"🔄"}</span>{"Конвертировать"}
-                    </button>
+                    <div class="convert-bar">
+                        <button class={classes!("btn", "btn-primary", if needs_action { "needs-action" } else { "" })}
+                            onclick={on_convert}
+                            disabled={(*files).is_empty() || (*output_folder).is_empty() || *is_busy}>
+                            <span>{"🔄"}</span>{"Конвертировать"}
+                        </button>
+                        <label class="opt" title="Заменять существующие DXF. Если выключено — к имени добавляется индекс (_1, _2, …), чтобы не перезаписать результат.">
+                            <input type="checkbox" checked={(*options).overwrite} onchange={on_toggle_overwrite}/>
+                            <span>{"Заменять файлы"}</span>
+                        </label>
+                    </div>
+                    if needs_action {
+                        <div class="needs-action-hint">
+                            <span class="arrow">{"👉"}</span>{action_hint}
+                        </div>
+                    }
                 </div>
             </header>
 
@@ -256,16 +288,48 @@ pub fn App() -> Html {
                     </div>
                 </section>
 
-                <section class="card compact">
-                    <div class="options">
-                        <label class="opt" title="Рисовать заливку параллельными линиями внутри замкнутых фигур (вместо пустого контура).">
-                            <input type="checkbox" checked={(*options).fill_as_lines} onchange={on_toggle_fill}/>
-                            <span>{"Заливка линиями"}</span>
-                        </label>
-                        <label class="opt" title="Переносить цвета SVG (fill/stroke) в DXF. Выключите для чёрно-белого результата.">
-                            <input type="checkbox" checked={(*options).preserve_colors} onchange={on_toggle_colors}/>
-                            <span>{"Сохранять цвета"}</span>
-                        </label>
+                <section class="card">
+                    <div class="card-head"><h2>{"⚙️ Настройки конвертации"}</h2></div>
+
+                    <div class="settings-group">
+                        <h3>{"Качество"}</h3>
+                        <div class="options">
+                            <label class="opt" title="Рисовать заливку параллельными линиями внутри замкнутых фигур (вместо пустого контура).">
+                                <input type="checkbox" checked={(*options).fill_as_lines} onchange={on_toggle_fill}/>
+                                <span>{"Заливка линиями"}</span>
+                            </label>
+                            <label class="opt" title="Переносить цвета SVG (fill/stroke) в DXF. Выключите для чёрно-белого результата.">
+                                <input type="checkbox" checked={(*options).preserve_colors} onchange={on_toggle_colors}/>
+                                <span>{"Сохранять цвета"}</span>
+                            </label>
+                            <label class="opt" title="Точные цвета (true-color, группа 420) вместо приближённых ACI. Только при включённом «Сохранять цвета».">
+                                <input type="checkbox" checked={(*options).true_color} onchange={on_toggle_true_color} disabled={!(*options).preserve_colors}/>
+                                <span>{"Точные цвета"}</span>
+                            </label>
+                            <label class="opt" title="Трассировать растровые изображения (PNG/JPEG/GIF) в вектор через marching squares.">
+                                <input type="checkbox" checked={(*options).trace_raster} onchange={on_toggle_trace}/>
+                                <span>{"Трассировка растра"}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>{"Имя файла"}</h3>
+                        <div class="options">
+                            <label class={classes!("opt", if !(*options).preserve_colors { "disabled" } else { "" })}
+                                title={if (*options).preserve_colors { "Добавлять к имени суффикс _color (например drawing_color.dxf)." } else { "Доступно только при включённом «Сохранять цвета»." }}>
+                                <input type="checkbox" checked={(*options).add_color_suffix} onchange={on_toggle_color_suffix} disabled={!(*options).preserve_colors}/>
+                                <span>{"+ _color"}</span>
+                            </label>
+                            <label class={classes!("opt", if !(*options).fill_as_lines { "disabled" } else { "" })}
+                                title={if (*options).fill_as_lines { "Добавлять к имени суффикс _hatch (например drawing_hatch.dxf)." } else { "Доступно только при включённом «Заливка линиями»." }}>
+                                <input type="checkbox" checked={(*options).add_hatch_suffix} onchange={on_toggle_hatch_suffix} disabled={!(*options).fill_as_lines}/>
+                                <span>{"+ _hatch"}</span>
+                            </label>
+                        </div>
+                        <div class="hint" style="margin-top:8px;margin-bottom:0;">
+                            {"Без замены файлов (чекбокс у кнопки) имена создаются с индексом _1, _2, … при совпадении."}
+                        </div>
                     </div>
                 </section>
 

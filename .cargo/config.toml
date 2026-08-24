@@ -1,0 +1,10 @@
+# Глобальные настройки cargo для проекта SVGtoDXF.
+#
+# [target.x86_64-pc-windows-msvc]
+# windows_subsystem = "windows"  <- ключевой фикс: собирает GUI-приложение без
+# консольного окна. Без этого при запуске .exe в Windows всплывает чёрное окно
+# консоли, закрытие которого завершает и основное приложение.
+# Применимо только к Windows-таргету, на Linux/macOS игнорируется.
+
+[target.x86_64-pc-windows-msvc]
+windows_subsystem = "windows"

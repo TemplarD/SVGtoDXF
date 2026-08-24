@@ -1,8 +1,8 @@
 //! SVG to DXF Integration Tests Module
 
+use serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
-use serde_wasm_bindgen;
 
 pub mod test_runner;
 pub mod utils;
@@ -37,7 +37,7 @@ pub fn run_all_tests() -> Result<JsValue, JsValue> {
             message: "All modules integrate successfully".to_string(),
         },
     ];
-    
+
     serde_wasm_bindgen::to_value(&results)
         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }
@@ -50,7 +50,7 @@ pub fn run_test(test_name: &str) -> Result<JsValue, JsValue> {
         passed: true,
         message: format!("Test {} completed successfully", test_name),
     };
-    
+
     serde_wasm_bindgen::to_value(&result)
         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }
@@ -63,7 +63,7 @@ pub fn get_available_tests() -> Result<JsValue, JsValue> {
         "UI Module Test".to_string(),
         "Integration Test".to_string(),
     ];
-    
+
     serde_wasm_bindgen::to_value(&tests)
         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }

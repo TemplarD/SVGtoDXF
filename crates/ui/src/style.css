@@ -137,6 +137,70 @@ body {
 
 .status-line { font-size: .9rem; color: var(--muted); padding: 4px 2px; }
 
+/* ===== Группы настроек (Качество / Имя файла) ===== */
+.settings-group {
+  background: var(--bg-elev2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.settings-group:last-child { margin-bottom: 0; }
+.settings-group h3 {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.settings-group .options { display: flex; gap: 8px; flex-wrap: wrap; }
+.opt { opacity: 1; transition: opacity .15s ease; }
+.opt.disabled { opacity: .4; cursor: not-allowed; }
+.opt.disabled input { cursor: not-allowed; }
+
+/* ===== Чекбокс «Заменять файлы» рядом с кнопкой Конвертировать ===== */
+.convert-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.convert-bar .opt {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+}
+
+/* ===== Анимация-подсказка кнопки Конвертировать ===== */
+/* Пульсирующая обводка + мягкое покачивание, пока действие заблокировано
+   необходимостью выбрать SVG и/или папку вывода. */
+.btn-primary.needs-action {
+  animation: pulse-glow 1.8s ease-in-out infinite, nudge 2.4s ease-in-out infinite;
+  border: 1px solid var(--accent);
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 4px 14px rgba(91,140,255,.35); }
+  50%      { box-shadow: 0 0 0 4px rgba(91,140,255,.22), 0 4px 18px rgba(91,140,255,.5); }
+}
+@keyframes nudge {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+/* Стрелочка-указатель, ведущая к действию, которое нужно сделать */
+.needs-action-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--accent);
+  background: rgba(91,140,255,.12);
+  border: 1px solid rgba(91,140,255,.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+  animation: pulse-glow 1.8s ease-in-out infinite;
+}
+.needs-action-hint .arrow { animation: nudge 2.4s ease-in-out infinite; display: inline-block; }
+
 /* Adaptive */
 @media (max-width: 560px) {
   .app { padding: 10px; }
@@ -144,4 +208,6 @@ body {
   .header-actions .btn { width: 100%; justify-content: center; }
   .card-actions { width: 100%; }
   .card-actions .btn { flex: 1; justify-content: center; }
+  .convert-bar { width: 100%; }
+  .needs-action-hint { width: 100%; justify-content: center; }
 }

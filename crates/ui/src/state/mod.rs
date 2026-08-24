@@ -36,6 +36,13 @@ pub struct ConversionOptions {
     pub trace_raster: bool,
     /// Порог яркости для трассировки растра (0..255)
     pub raster_threshold: u8,
+    /// Заменять существующие DXF. Если false — к имени добавляется
+    /// уникальный индекс (_1, _2, …), чтобы не перезаписать результат.
+    pub overwrite: bool,
+    /// Добавлять к имени суффикс `_color` (активно при preserve_colors).
+    pub add_color_suffix: bool,
+    /// Добавлять к имени суффикс `_hatch` (активно при fill_as_lines).
+    pub add_hatch_suffix: bool,
 }
 
 impl Default for ConversionOptions {
@@ -47,6 +54,9 @@ impl Default for ConversionOptions {
             fill_step: 2.0,
             trace_raster: true,
             raster_threshold: 128,
+            overwrite: false,
+            add_color_suffix: false,
+            add_hatch_suffix: false,
         }
     }
 }

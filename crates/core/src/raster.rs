@@ -29,8 +29,9 @@ fn decode_luma(img: &ImageKind) -> ConversionResult<(u32, u32, Vec<f32>)> {
         }
     };
 
-    let dyn_img = image::load_from_memory(bytes)
-        .map_err(|e| ConversionError::svg_parse_error(format!("Не удалось декодировать растр: {}", e)))?;
+    let dyn_img = image::load_from_memory(bytes).map_err(|e| {
+        ConversionError::svg_parse_error(format!("Не удалось декодировать растр: {}", e))
+    })?;
 
     // Уменьшаем для скорости
     let (w, h) = (dyn_img.width(), dyn_img.height());

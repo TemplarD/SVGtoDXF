@@ -13,7 +13,7 @@ mod tests {
         // Проверяем что команда конвертации существует
         let input_path = "test.svg".to_string();
         let output_path = "test.dxf".to_string();
-        
+
         // Просто проверяем что функция принимает правильные параметры
         assert_eq!(input_path, "test.svg");
         assert_eq!(output_path, "test.dxf");
@@ -37,7 +37,7 @@ mod tests {
         // Проверяем параметры команды
         let input = "input.svg";
         let output = "output.dxf";
-        
+
         assert!(!input.is_empty());
         assert!(!output.is_empty());
         assert!(input.ends_with(".svg"));

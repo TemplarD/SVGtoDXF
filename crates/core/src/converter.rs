@@ -1,18 +1,18 @@
 //! Основной модуль конвертации SVG в DXF
 
 use crate::error::{ConversionError, ConversionResult};
-use dxf::Drawing;
-use dxf::enums::AcadVersion;
 use dxf::entities::{Entity, EntityType, LwPolyline, MText};
+use dxf::enums::AcadVersion;
+use dxf::Color;
+use dxf::Drawing;
 use dxf::LwPolylineVertex;
 use dxf::Point;
-use dxf::Color;
-use std::path::Path;
-use std::fs;
-use usvg::{NodeKind, Tree, TreeParsing};
-use tiny_skia_path::{PathSegment as Seg};
-use tracing::{debug, trace, warn};
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
+use tiny_skia_path::PathSegment as Seg;
+use tracing::{debug, trace, warn};
+use usvg::{NodeKind, Tree, TreeParsing};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileConversionResult {
@@ -45,6 +45,13 @@ pub struct ConversionOptions {
     pub trace_raster: bool,
     /// Порог яркости для трассировки растра (0..255)
     pub raster_threshold: u8,
+    /// Заменять существующие DXF-файлы. Если false — к имени добавляется
+    /// уникальный индекс (_1, _2, …), чтобы не перезаписать результат.
+    pub overwrite: bool,
+    /// Добавлять к имени выходного файла суффикс `_color` (активно при preserve_colors).
+    pub add_color_suffix: bool,
+    /// Добавлять к имени выходного файла суффикс `_hatch` (активно при fill_as_lines).
+    pub add_hatch_suffix: bool,
 }
 
 impl Default for ConversionOptions {
@@ -56,6 +63,9 @@ impl Default for ConversionOptions {
             fill_step: 2.0,
             trace_raster: true,
             raster_threshold: 128,
+            overwrite: false,
+            add_color_suffix: false,
+            add_hatch_suffix: false,
         }
     }
 }
@@ -89,12 +99,7 @@ impl SvgConverter {
     }
 
     /// Добавляет сущность и запоминает её точный RGB (для true-color 420).
-    fn add_entity_rgb(
-        &mut self,
-        drawing: &mut Drawing,
-        entity: Entity,
-        rgb: Option<(u8, u8, u8)>,
-    ) {
+    fn add_entity_rgb(&mut self, drawing: &mut Drawing, entity: Entity, rgb: Option<(u8, u8, u8)>) {
         self.entity_rgb.push(rgb);
         drawing.add_entity(entity);
     }
@@ -106,8 +111,9 @@ impl SvgConverter {
     pub fn convert_file(&mut self, input_path: &Path, output_path: &Path) -> ConversionResult<()> {
         debug!("Чтение SVG файла: {}", input_path.display());
 
-        let svg_content = fs::read_to_string(input_path)
-            .map_err(|e| ConversionError::svg_read_error(format!("Не удалось прочитать файл: {}", e)))?;
+        let svg_content = fs::read_to_string(input_path).map_err(|e| {
+            ConversionError::svg_read_error(format!("Не удалось прочитать файл: {}", e))
+        })?;
 
         let tree = Tree::from_str(&svg_content, &self.svg_options)
             .map_err(|e| ConversionError::svg_parse_error(format!("Ошибка парсинга SVG: {}", e)))?;
@@ -287,8 +293,12 @@ impl SvgConverter {
             if let Some((r, g, b)) = extract_rgb(path) {
                 entity.common.color = color_from_rgb(r, g, b);
                 Some((r, g, b))
-            } else { None }
-        } else { None };
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         self.add_entity_rgb(drawing, entity, rgb);
 
         // Заливка параллельными линиями (если включено и есть замкнутый контур с заливкой)
@@ -422,9 +432,15 @@ impl SvgConverter {
                         if let usvg::Paint::Color(c) = &fill.paint {
                             entity.common.color = color_from_rgb(c.red, c.green, c.blue);
                             Some((c.red, c.green, c.blue))
-                        } else { None }
-                    } else { None }
-                } else { None };
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
                 self.add_entity_rgb(drawing, entity, rgb);
                 debug!(
                     "Текст: '{}' @ ({:.1}, {:.1}) размер={:.1} шрифт={}",
@@ -447,10 +463,14 @@ impl SvgConverter {
 
 /// Кубическая кривая Безье
 fn cubic_bezier(
-    p0x: f64, p0y: f64,
-    p1x: f64, p1y: f64,
-    p2x: f64, p2y: f64,
-    p3x: f64, p3y: f64,
+    p0x: f64,
+    p0y: f64,
+    p1x: f64,
+    p1y: f64,
+    p2x: f64,
+    p2y: f64,
+    p3x: f64,
+    p3y: f64,
     t: f64,
 ) -> (f64, f64) {
     let u = 1.0 - t;
@@ -461,9 +481,12 @@ fn cubic_bezier(
 
 /// Квадратичная кривая Безье
 fn quadratic_bezier(
-    p0x: f64, p0y: f64,
-    p1x: f64, p1y: f64,
-    p2x: f64, p2y: f64,
+    p0x: f64,
+    p0y: f64,
+    p1x: f64,
+    p1y: f64,
+    p2x: f64,
+    p2y: f64,
     t: f64,
 ) -> (f64, f64) {
     let u = 1.0 - t;

@@ -2,10 +2,10 @@
 //! Использует глобальный window.__TAURI__.core.invoke (включается
 //! опцией withGlobalTauri в tauri.conf.json) либо прямой импорт.
 
+use js_sys::{Function, Object, Reflect};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::console;
-use js_sys::{Function, Object, Reflect};
 
 /// Вызывает Tauri-команду. Работает и при withGlobalTauri=true
 /// (window.__TAURI__.core.invoke), и если __TAURI_INTERNALS__ доступен.
@@ -17,11 +17,8 @@ async fn invoke_tauri(command: &str, args: &JsValue) -> Result<JsValue, JsValue>
         if let Ok(core) = Reflect::get(&tauri, &JsValue::from_str("core")) {
             if let Ok(invoke) = Reflect::get(&core, &JsValue::from_str("invoke")) {
                 if let Ok(invoke_fn) = invoke.dyn_into::<Function>() {
-                    let promise = invoke_fn.call2(
-                        &JsValue::NULL,
-                        &JsValue::from_str(command),
-                        args,
-                    )?;
+                    let promise =
+                        invoke_fn.call2(&JsValue::NULL, &JsValue::from_str(command), args)?;
                     let promise = promise.dyn_into::<js_sys::Promise>()?;
                     return JsFuture::from(promise).await;
                 }
@@ -33,11 +30,7 @@ async fn invoke_tauri(command: &str, args: &JsValue) -> Result<JsValue, JsValue>
     if let Ok(internals) = Reflect::get(&window, &JsValue::from_str("__TAURI_INTERNALS__")) {
         if let Ok(invoke) = Reflect::get(&internals, &JsValue::from_str("invoke")) {
             if let Ok(invoke_fn) = invoke.dyn_into::<Function>() {
-                let promise = invoke_fn.call2(
-                    &JsValue::NULL,
-                    &JsValue::from_str(command),
-                    args,
-                )?;
+                let promise = invoke_fn.call2(&JsValue::NULL, &JsValue::from_str(command), args)?;
                 let promise = promise.dyn_into::<js_sys::Promise>()?;
                 return JsFuture::from(promise).await;
             }
@@ -65,7 +58,9 @@ pub async fn select_files() -> Result<Vec<String>, JsValue> {
 /// Возвращает String (путь) или ошибку.
 pub async fn select_output_folder() -> Result<String, JsValue> {
     let result = invoke_tauri("api_select_output_folder", &JsValue::NULL).await?;
-    result.as_string().ok_or(JsValue::from_str("не выбрана папка"))
+    result
+        .as_string()
+        .ok_or(JsValue::from_str("не выбрана папка"))
 }
 
 /// Конвертация списка файлов в выходную папку.
@@ -104,7 +99,10 @@ pub async fn get_file_size(path: String) -> Result<u64, JsValue> {
     let args = Object::new();
     Reflect::set(&args, &JsValue::from_str("path"), &JsValue::from_str(&path))?;
     let result = invoke_tauri("api_get_file_size", &args).await?;
-    result.as_f64().map(|v| v as u64).ok_or(JsValue::from_str("не удалось получить размер"))
+    result
+        .as_f64()
+        .map(|v| v as u64)
+        .ok_or(JsValue::from_str("не удалось получить размер"))
 }
 
 /// Получить статус приложения.

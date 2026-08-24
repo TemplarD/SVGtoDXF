@@ -30,7 +30,7 @@ async fn convert_svg_to_dxf(
 ) -> Result<String, String> {
     match state.converter.lock().unwrap().convert_file(
         std::path::Path::new(&input_path),
-        std::path::Path::new(&output_path)
+        std::path::Path::new(&output_path),
     ) {
         Ok(_) => Ok(format!("Файл успешно конвертирован: {}", output_path)),
         Err(e) => Err(format!("Ошибка конвертации: {}", e)),
@@ -40,12 +40,10 @@ async fn convert_svg_to_dxf(
 /// Выбор выходной папки
 #[tauri::command]
 async fn select_output_folder() -> Result<String, String> {
-    let output_dir = std::env::current_dir()
-        .unwrap()
-        .join("output");
-    
+    let output_dir = std::env::current_dir().unwrap().join("output");
+
     std::fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
-    
+
     Ok(output_dir.to_string_lossy().to_string())
 }
 
@@ -59,41 +57,48 @@ async fn convert_folder(
     let mut results = Vec::new();
     let input_path = std::path::Path::new(&input_folder);
     let output_path = std::path::Path::new(&output_folder);
-    
+
     if !input_path.exists() {
         return Err("Входная папка не существует".to_string());
     }
-    
+
     std::fs::create_dir_all(output_path).map_err(|e| e.to_string())?;
-    
+
     if let Ok(entries) = std::fs::read_dir(input_path) {
         for entry in entries.flatten() {
             let file_path = entry.path();
             if let Some(extension) = file_path.extension() {
                 if extension == "svg" {
-                    let file_name = file_path.file_stem()
-                        .unwrap_or_default()
-                        .to_string_lossy();
+                    let file_name = file_path.file_stem().unwrap_or_default().to_string_lossy();
                     let dxf_name = format!("{}.dxf", file_name);
                     let dxf_path = output_path.join(&dxf_name);
-                    
-                    match state.converter.lock().unwrap().convert_file(&file_path, &dxf_path) {
+
+                    match state
+                        .converter
+                        .lock()
+                        .unwrap()
+                        .convert_file(&file_path, &dxf_path)
+                    {
                         Ok(_) => {
-                            results.push(format!("✓ {} -> {}", 
-                                file_path.file_name().unwrap().to_string_lossy(), 
-                                dxf_name));
+                            results.push(format!(
+                                "✓ {} -> {}",
+                                file_path.file_name().unwrap().to_string_lossy(),
+                                dxf_name
+                            ));
                         }
                         Err(e) => {
-                            results.push(format!("✗ {} ошибка: {}", 
-                                file_path.file_name().unwrap().to_string_lossy(), 
-                                e));
+                            results.push(format!(
+                                "✗ {} ошибка: {}",
+                                file_path.file_name().unwrap().to_string_lossy(),
+                                e
+                            ));
                         }
                     }
                 }
             }
         }
     }
-    
+
     Ok(results)
 }
 
@@ -114,8 +119,10 @@ pub fn run() {
             api::api_get_status,
             api::api_get_file_size
         ])
-        .setup(|_app| {
-            println!("🚀 SVG to DXF Converter запущен");
+        .setup(|app| {
+            // Имя/версию пробрасываем в лог через tracing (stdout только в дебаге).
+            let name = app.package_info().name.clone();
+            tracing::info!("🚀 {} запущен", name);
             Ok(())
         })
         .run(tauri::generate_context!())
