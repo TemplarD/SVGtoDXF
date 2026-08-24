@@ -52,9 +52,13 @@ svg2dxf/
 
 ### Требования
 
-- Rust 1.77.2+
-- Node.js 18+ (для фронтенд сборки)
-- Системные зависимости для Tauri
+- **Rust** ≥ 1.77 (проверено на 1.93) + `cargo tauri` CLI 2.x (`cargo install tauri-cli`)
+- **Node.js** ≥ 18 (проверено на 22) + **trunk** 0.21 (`npm install -g trunk`)
+- Rust-таргет **wasm32-unknown-unknown** (`rustup target add wasm32-unknown-unknown`)
+- Системные зависимости Tauri (см. ниже, раздел «Кроссплатформенность»)
+- Для кросс-сборки Windows: `rustup target add x86_64-pc-windows-gnu` + MinGW-w64
+
+> `Cargo.lock` **зафиксирован в репозитории** — сборка воспроизводима и не требует `cargo update`.
 
 ### Установка и запуск
 
@@ -210,25 +214,26 @@ cargo tauri build --target x86_64-unknown-linux-gnu
 
 ## 📦 Готовые сборки
 
-После `cargo tauri build` (или кросс-сборки) готовые билды лежат в `target/`:
+Скомпилированные билды **включены в репозиторий** в папку [`releases/`](releases/) (копия из `target/` после сборки). Их можно скачать прямо из дерева репозитория на GitHub без сборки из исходников.
 
-### Linux (собрано на x86_64, проверено на Ubuntu 24.04)
-| Формат | Путь | Установка |
+> Билды собираются локально командой `cargo tauri build`, затем копируются в `releases/` скриптом `build/collect_releases.sh`. Актуально для версии **1.0.0**.
+
+### Linux (x86_64, проверено на Ubuntu 24.04)
+| Формат | Путь в репозитории | Установка |
 |--------|------|-----------|
-| **.deb** | `target/release/bundle/deb/SVG to DXF Converter_1.0.0_amd64.deb` | `sudo apt install ./target/release/bundle/deb/"SVG to DXF Converter_1.0.0_amd64.deb"` |
-| **.rpm** | `target/release/bundle/rpm/SVG to DXF Converter-1.0.0-1.x86_64.rpm` | `sudo dnf install ./target/release/bundle/rpm/SVG\ to\ DXF\ Converter-1.0.0-1.x86_64.rpm` |
-| **AppImage** | `target/release/bundle/appimage/SVG to DXF Converter_1.0.0_amd64.AppImage` | `chmod +x` и запуск |
+| **.deb** | `releases/linux/SVG to DXF Converter_1.0.0_amd64.deb` | `sudo apt install ./releases/linux/"SVG to DXF Converter_1.0.0_amd64.deb"` |
+| **.rpm** | `releases/linux/SVG to DXF Converter-1.0.0-1.x86_64.rpm` | `sudo dnf install ./releases/linux/SVG\ to\ DXF\ Converter-1.0.0-1.x86_64.rpm` |
+| **AppImage** | `releases/linux/SVG to DXF Converter_1.0.0_amd64.AppImage` | `chmod +x` и запуск |
 
 Удаление старой версии (если ставили через .deb):
 ```bash
 sudo apt remove svg-to-dxf-converter
 ```
 
-### Windows (кросс-сборка из Linux через MinGW, `x86_64-pc-windows-gnu`)
-| Формат | Путь |
+### Windows (x86_64, кросс-сборка из Linux через MinGW `x86_64-pc-windows-gnu`)
+| Формат | Путь в репозитории |
 |--------|------|
-| **Установщик NSIS** | `target/x86_64-pc-windows-gnu/release/bundle/nsis/SVG to DXF Converter_1.0.0_x64-setup.exe` |
-| Голый .exe | `target/x86_64-pc-windows-gnu/release/svg2dxf-tauri-app.exe` |
+| **Установщик NSIS** | `releases/windows/SVG to DXF Converter_1.0.0_x64-setup.exe` |
 
 > Подпись отсутствует (её нельзя сделать вне Windows-хоста) — при запуске Windows может показать предупреждение SmartScreen. Это нормально, «Подробнее → Всё равно запустить».
 
@@ -238,12 +243,15 @@ sudo apt remove svg-to-dxf-converter
 cargo tauri build --target x86_64-apple-darwin   # Intel
 cargo tauri build --target aarch64-apple-darwin  # Apple Silicon
 ```
-Результат: `.app` и `.dmg` в `target/<target>/release/bundle/`.
+Результат: `.app` и `.dmg` в `target/<target>/release/bundle/`. При необходимости скопируйте в `releases/macos/` вручную.
 
-### GitHub Releases
-Билды можно выложить в релизы репозитория: создайте Release на
-https://github.com/TemplarD/SVGtoDXF/releases и загрузите файлы из таблиц выше.
-Тогда пользователи смогут скачать их по прямым ссылкам без сборки из исходников.
+### Обновление билдов в репозитории
+После `cargo tauri build` (и кросс-сборки) выполните:
+```bash
+bash build/collect_releases.sh
+git add releases && git commit -m "build: обновить релизы"
+```
+
 
 ## 🔍 Чем открывать результат (DXF / SVG / 3D)
 

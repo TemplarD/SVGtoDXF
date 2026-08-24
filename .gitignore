@@ -1,13 +1,11 @@
 # Rust
 target/
-Cargo.lock
 **/*.rs.bk
 
 # Tauri
 src-tauri/target/
 src-tauri/Cargo.lock
 crates/*/target/
-crates/*/Cargo.lock
 
 # IDE
 .vscode/
