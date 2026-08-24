@@ -31,28 +31,8 @@ pub fn App() -> Html {
     let files = use_state(|| Vec::<FileItem>::new());
     let status_message = use_state(|| "Готов к работе".to_string());
     let output_folder = use_state(|| "".to_string());
-    let debug_mode = use_state(|| false);
     let is_busy = use_state(|| false);
     let options = use_state(ConversionOptions::default);
-
-    // Слушаем события F12 для дебаг-режима
-    let debug_mode_clone = debug_mode.clone();
-    use_effect_with((), move |_| {
-        if let Some(window) = web_sys::window() {
-            let listener = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
-                if event.key() == "F12" {
-                    debug_mode_clone.set(!*debug_mode_clone);
-                    console::log_1(&"🔧 F12 - переключение дебаг режима".into());
-                }
-            }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
-            let _ = window.add_event_listener_with_callback(
-                "keydown",
-                listener.as_ref().unchecked_ref(),
-            );
-            listener.forget();
-        }
-        || ()
-    });
 
     // Выбор SVG файлов
     let on_open_file_dialog = {
@@ -207,12 +187,6 @@ pub fn App() -> Html {
     html! {
         <div class="app">
             <style>{ include_str!("style.css") }</style>
-
-            if *debug_mode {
-                <div style="position: fixed; top: 10px; left: 10px; background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 5px; z-index: 1000; font-size: 12px;">
-                    { "🔧 ДЕБУГ РЕЖИМ (F12)" }
-                </div>
-            }
 
             <header class="app-header">
                 <div class="brand">

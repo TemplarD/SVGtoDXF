@@ -116,7 +116,6 @@ pub fn run() {
         ])
         .setup(|_app| {
             println!("🚀 SVG to DXF Converter запущен");
-            println!("🔧 Нажмите F12 в браузере для включения дебаг режима");
             Ok(())
         })
         .run(tauri::generate_context!())
