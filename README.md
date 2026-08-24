@@ -88,7 +88,7 @@ cargo tauri build
 - ✅ **Растровые изображения** (`image`, PNG/JPEG/GIF) — **трассируются в вектор** через marching squares (изолиния по яркости → набор LWPOLYLINE). Вложенный SVG в `<image>` пока не поддерживается.
 - ✅ Массовая конвертация файлов
 - ✅ Drag & Drop интерфейс
-- ✅ Автоматическое сохранение рядом с исходными файлами
+- ✅ Сохранение в выбранную папку (отдельные DXF рядом с именами исходных файлов)
 - ✅ Обработка ошибок с детальными сообщениями
 
 ### Пользовательский интерфейс
@@ -96,17 +96,13 @@ cargo tauri build
 - ⚙️ Панель настроек конвертации с подсказками (tooltip при наведении):
   - **Заливка линиями** — рисовать заливку параллельными линиями внутри фигур
   - **Сохранять цвета** — переносить цвета SVG (выключите для ч/б)
-  - **Точные цвета (true-color)** — писать группу 420 (для новых программ)
-  - **Трассировка растра** — векторизовать встроенные растровые изображения
+  - *Фоново (без чекбокса):* true-color (группа 420), трассировка вложенных растров
 - 📱 Адаптивный интерфейс
 - 🔄 Прогресс конвертации в реальном времени
 - 📋 Список файлов со статусами
 
-### Отладка и тестирование
-- 🐛 **F12** - дебаг панель с логами
-- 🧪 Автоматические тесты UI
-- 📊 Отчеты о системе
-- 🔍 Детальная диагностика
+### Отладка
+- 🐛 **F12** — индикатор режима отладки (красный бадж в левом верхнем углу). Детальная диагностика и логи пока не реализованы.
 
 ## 🛠️ Технологический стек
 
@@ -139,19 +135,11 @@ cargo tauri build
 
 ### Горячие клавиши
 
-- **F12** - Переключить режим отладки
-- **Ctrl+O** - Выбрать файлы
-- **Ctrl+F** - Выбрать папку
-- **Ctrl+R** - Начать конвертацию
-- **Delete** - Очистить список
+- **F12** — переключить индикатор режима отладки (красный бадж в левом верхнем углу)
 
 ### Дебаг режим
 
-Нажмите **F12** для открытия панели отладки:
-- 📋 Просмотр логов в реальном времени
-- 🧪 Запуск автотестов
-- 📊 Создание отчетов
-- 🔍 Диагностика системы
+F12 включает/выключает режим отладки — в режиме он отображается красным баджем `🔧 ДЕБУГ РЕЖИМ (F12)` в левом верхнем углу окна. Детальная диагностика и логи пока не реализованы.
 
 ## 🧪 Тестирование
 
@@ -170,11 +158,11 @@ cargo test --workspace
 
 ### Доступные тесты
 
-- `test_main_window_open` - проверка открытия UI
-- `test_select_files_button` - тест кнопки выбора
-- `test_f12_debug_toggle` - тест дебаг панели
-- `test_drag_drop_zone` - тест Drag & Drop
-- `test_conversion_progress` - тест прогресса конвертации
+- **core**: `test_converter_creation`, `test_layer_setting`, `test_simple_svg_conversion`
+- **ui** (unit): `test_ui_module_compiles`, `test_yew_components`, `test_file_item_creation`, `test_file_status_equality`
+- **integration_tests**: `test_test_result_creation`, `test_test_result_serialization`, `test_multiple_test_results`
+
+> UI-интеграционные тесты в браузере (test_main_window_open и т.п.) пока **не реализованы** — в README перечислены как план на будущее.
 
 ## 📝 Разработка
 
@@ -195,9 +183,10 @@ cargo tauri dev
 cargo tauri build
 
 # Для конкретных платформ
-cargo tauri build --target x86_64-pc-windows-msvc
-cargo tauri build --target x86_64-apple-darwin
-cargo tauri build --target x86_64-unknown-linux-gnu
+cargo tauri build --target x86_64-unknown-linux-gnu   # Linux
+cargo tauri build --target x86_64-pc-windows-gnu      # Windows (MinGW/cросс-сборка из Linux)
+# cargo tauri build --target x86_64-pc-windows-msvc    # Windows (только на Windows + MSVC Build Tools)
+cargo tauri build --target x86_64-apple-darwin        # macOS Intel
 ```
 
 ### 🌐 Кроссплатформенность (Windows / Linux / macOS)
@@ -207,7 +196,7 @@ cargo tauri build --target x86_64-unknown-linux-gnu
 | ОС | Команда сборки | Системные зависимости |
 |----|----------------|----------------------|
 | **Linux** (x86_64) | `cargo tauri build` | `libwebkit2gtk-4.1-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, ` librsvg2-dev`, пакетный менеджер (на Ubuntu: `sudo apt install ...`) |
-| **Windows** (x86_64) | `cargo tauri build --target x86_64-pc-windows-msvc` | Инструменты сборки MSVC (Visual Studio Build Tools), WebView2 (идёт в Windows 11 по умолчанию) |
+| **Windows** (x86_64) | `cargo tauri build --target x86_64-pc-windows-gnu` (MinGW, кросс-сборка из Linux) | `mingw-w64` (`sudo apt install mingw-w64`), `rustup target add x86_64-pc-windows-gnu`, NSIS (`makensis` для .exe) |
 | **macOS** (Intel/Apple Silicon) | `cargo tauri build --target x86_64-apple-darwin` (или `aarch64-apple-darwin`) | Xcode Command Line Tools (`xcode-select --install`) |
 
 > Полный список зависимостей для конкретной ОС — см. официальную документацию Tauri 2: https://tauri.app/start/prerequisites/
